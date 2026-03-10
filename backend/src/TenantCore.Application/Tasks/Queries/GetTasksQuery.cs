@@ -58,12 +58,13 @@ internal sealed class GetTasksQueryHandler(
             query = query.Where(x => x.Status == request.Status.Value);
         }
 
+        var pageSize = Math.Min(request.PageSize, 100);
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
             .OrderBy(x => x.Status)
             .ThenBy(x => x.DueDate)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((request.Page - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new TaskListItem(
                 x.Id,
                 x.ProjectId,
@@ -80,6 +81,6 @@ internal sealed class GetTasksQueryHandler(
                 x.UpdatedAtUtc))
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<TaskListItem>(items, request.Page, request.PageSize, totalCount);
+        return new PagedResult<TaskListItem>(items, request.Page, pageSize, totalCount);
     }
 }

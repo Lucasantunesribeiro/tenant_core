@@ -45,11 +45,12 @@ internal sealed class GetClientsQueryHandler(
             query = query.Where(x => x.Status == request.Status.Value);
         }
 
+        var pageSize = Math.Min(request.PageSize, 100);
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
             .OrderBy(x => x.Name)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((request.Page - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new ClientListItem(
                 x.Id,
                 x.Name,
@@ -60,6 +61,6 @@ internal sealed class GetClientsQueryHandler(
                 x.UpdatedAtUtc))
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<ClientListItem>(items, request.Page, request.PageSize, totalCount);
+        return new PagedResult<ClientListItem>(items, request.Page, pageSize, totalCount);
     }
 }

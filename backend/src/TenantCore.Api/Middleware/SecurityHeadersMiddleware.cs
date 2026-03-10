@@ -10,6 +10,12 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
         context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
         context.Response.Headers["Content-Security-Policy"] =
             "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' http://localhost:4318;";
+        // HSTS: tell browsers to use HTTPS exclusively for 2 years.
+        // Only set over HTTPS — skip for plain HTTP local dev to avoid breaking localhost.
+        if (context.Request.IsHttps)
+        {
+            context.Response.Headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains";
+        }
 
         await next(context);
     }

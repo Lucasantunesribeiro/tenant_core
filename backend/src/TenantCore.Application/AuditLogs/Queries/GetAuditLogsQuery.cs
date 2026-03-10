@@ -43,11 +43,12 @@ internal sealed class GetAuditLogsQueryHandler(
             query = query.Where(x => x.EntityType.Contains(entityType));
         }
 
+        var pageSize = Math.Min(request.PageSize, 100);
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
             .OrderByDescending(x => x.OccurredAtUtc)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((request.Page - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new AuditLogItem(
                 x.Id,
                 x.ActorUserId,
@@ -59,6 +60,6 @@ internal sealed class GetAuditLogsQueryHandler(
                 x.OccurredAtUtc))
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<AuditLogItem>(items, request.Page, request.PageSize, totalCount);
+        return new PagedResult<AuditLogItem>(items, request.Page, pageSize, totalCount);
     }
 }

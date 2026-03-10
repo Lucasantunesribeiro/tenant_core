@@ -69,7 +69,7 @@ public sealed class AuthController : ApiControllerBase
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Lax,
+            SameSite = SameSiteMode.Strict,
             Expires = expiresAtUtc.UtcDateTime,
             IsEssential = true
         });

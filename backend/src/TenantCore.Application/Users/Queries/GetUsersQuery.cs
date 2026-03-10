@@ -41,11 +41,12 @@ internal sealed class GetUsersQueryHandler(
             query = query.Where(x => x.Role == request.Role.Value);
         }
 
+        var pageSize = Math.Min(request.PageSize, 100);
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
             .OrderBy(x => x.FullName)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((request.Page - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new UserListItem(
                 x.Id,
                 x.Email,
@@ -55,6 +56,6 @@ internal sealed class GetUsersQueryHandler(
                 x.LastLoginAtUtc))
             .ToListAsync(cancellationToken);
 
-        return new PagedResult<UserListItem>(items, request.Page, request.PageSize, totalCount);
+        return new PagedResult<UserListItem>(items, request.Page, pageSize, totalCount);
     }
 }

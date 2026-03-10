@@ -8,7 +8,9 @@ public sealed class JwtOptions
 
     public string Audience { get; init; } = "tenant_core.web";
 
-    public string SigningKey { get; init; } = "super-secret-signing-key-change-me";
+    // Must be overridden via environment variable or secrets manager — never use the default in production.
+    // Minimum 32 characters; generate with: openssl rand -base64 48
+    public string SigningKey { get; init; } = string.Empty;
 
     public int AccessTokenMinutes { get; init; } = 15;
 

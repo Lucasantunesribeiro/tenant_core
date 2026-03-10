@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
@@ -41,6 +42,14 @@ try
     var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
                          ["http://localhost:5173"];
     var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+
+    if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey) || jwtOptions.SigningKey.Length < 32)
+    {
+        throw new InvalidOperationException(
+            "Jwt:SigningKey must be configured and at least 32 characters. " +
+            "Generate one with: openssl rand -base64 48");
+    }
+
     var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey));
 
     builder.Services.AddProblemDetails();
@@ -185,6 +194,20 @@ try
 
     var app = builder.Build();
 
+    // Trust X-Forwarded-For from Docker/proxy networks so RemoteIpAddress reflects the real client IP.
+    // Restrict to known private ranges to prevent X-Forwarded-For spoofing from the internet.
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        KnownNetworks =
+        {
+            new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("10.0.0.0"), 8),
+            new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("172.16.0.0"), 12),
+            new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("192.168.0.0"), 16),
+        },
+        ForwardLimit = 1,
+    });
+
     await app.Services.InitializeDatabaseAsync();
 
     if (app.Environment.IsDevelopment())
@@ -203,7 +226,10 @@ try
     app.UseRateLimiter();
     app.UseAuthorization();
 
-    app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
+    }
     app.MapHealthChecks("/health/live", new HealthCheckOptions
     {
         Predicate = _ => false

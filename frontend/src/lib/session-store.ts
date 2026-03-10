@@ -1,6 +1,11 @@
 import type { SessionSnapshot } from '../types/api'
 
+// Persisted to localStorage WITHOUT the access token (prevents XSS token exfiltration).
+// accessToken lives only in memory and is lost on page reload — the Axios interceptor
+// will call /api/auth/refresh (using the HttpOnly cookie) to obtain a new one silently.
 const STORAGE_KEY = 'tenant-core.session'
+
+type PersistedSession = Omit<SessionSnapshot, 'accessToken' | 'accessTokenExpiresAtUtc'>
 
 type Listener = () => void
 
@@ -17,7 +22,9 @@ function readInitialSession(): SessionSnapshot | null {
   }
 
   try {
-    return JSON.parse(raw) as SessionSnapshot
+    const persisted = JSON.parse(raw) as PersistedSession
+    // Reconstruct with empty token; interceptor will refresh before first API call
+    return { ...persisted, accessToken: '', accessTokenExpiresAtUtc: new Date(0).toISOString() }
   } catch {
     window.localStorage.removeItem(STORAGE_KEY)
     return null
@@ -30,6 +37,13 @@ function notify() {
   listeners.forEach((listener) => listener())
 }
 
+function persistSafe(snapshot: SessionSnapshot) {
+  if (typeof window === 'undefined') return
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { accessToken, accessTokenExpiresAtUtc, ...safe } = snapshot
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
+}
+
 export const sessionStore = {
   getSnapshot: () => currentSession,
   subscribe(listener: Listener) {
@@ -38,9 +52,7 @@ export const sessionStore = {
   },
   set(snapshot: SessionSnapshot) {
     currentSession = snapshot
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
-    }
+    persistSafe(snapshot)
     notify()
   },
   updateAccessToken(accessToken: string, accessTokenExpiresAtUtc: string) {
@@ -53,10 +65,7 @@ export const sessionStore = {
       accessToken,
       accessTokenExpiresAtUtc,
     }
-
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(currentSession))
-    }
+    // No localStorage write — tokens stay in memory only
     notify()
   },
   clear() {
