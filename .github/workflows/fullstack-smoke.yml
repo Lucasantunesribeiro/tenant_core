@@ -1,0 +1,61 @@
+name: fullstack-smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "docker-compose.yml"
+      - "infra/**"
+      - ".github/workflows/fullstack-smoke.yml"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build containers
+        run: docker compose build
+
+      - name: Start stack
+        run: docker compose up -d
+
+      - name: Wait for API readiness
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:5000/health/ready > /dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose logs api
+          exit 1
+
+      - name: Wait for frontend
+        run: |
+          for attempt in {1..30}; do
+            if curl -fsS http://localhost:5173/healthz > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs web
+          exit 1
+
+      - name: Smoke API response
+        run: curl -fsS http://localhost:5000/health/live
+
+      - name: Smoke frontend response
+        run: curl -fsS http://localhost:5173/healthz
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
