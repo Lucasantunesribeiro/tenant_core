@@ -12,6 +12,8 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/deploy-backend.yml"
+  # Allow manual deploys from the GitHub Actions UI (useful for hotfixes and infra-only changes).
+  workflow_dispatch:
 
 # Only one deploy runs at a time. A newer push cancels an in-progress deploy.
 concurrency:
