@@ -11,12 +11,12 @@ public sealed class TenantCoreDbContextFactory : IDesignTimeDbContextFactory<Ten
     {
         var optionsBuilder = new DbContextOptionsBuilder<TenantCoreDbContext>();
         var connectionString =
-            Environment.GetEnvironmentVariable("TENANT_CORE_SQLSERVER") ??
-            "Server=localhost,1433;Database=tenant_core;User Id=sa;Password=Your_password123;TrustServerCertificate=true";
+            Environment.GetEnvironmentVariable("TENANT_CORE_CONNSTRING") ??
+            "Host=localhost;Port=5432;Database=tenant_core;Username=postgres;Password=postgres";
 
-        optionsBuilder.UseSqlServer(connectionString, sql =>
+        optionsBuilder.UseNpgsql(connectionString, pg =>
         {
-            sql.MigrationsAssembly(typeof(TenantCoreDbContext).Assembly.FullName);
+            pg.MigrationsAssembly(typeof(TenantCoreDbContext).Assembly.FullName);
         });
 
         return new TenantCoreDbContext(optionsBuilder.Options, new DesignTimeCurrentSession());
