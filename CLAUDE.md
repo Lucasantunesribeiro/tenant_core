@@ -108,6 +108,84 @@ Integration tests use a real SQL Server test database. Test factory is in `tests
 
 Vitest + Testing Library. Test files live alongside feature code (e.g., `login-page.test.tsx`, `protected-route.test.tsx`).
 
+## Documentação técnica (`docs/`)
+
+Consulte estes arquivos antes de fazer mudanças na área correspondente:
+
+| Arquivo | Conteúdo | Quando consultar |
+|---|---|---|
+| `docs/architecture.md` | Visão geral do sistema, lifecycle de requests, camadas, observabilidade, topologia AWS recomendada | Antes de alterar pipeline, camadas ou planejar deploy |
+| `docs/tenant-isolation.md` | Pontos de enforcement (middleware, ICurrentSession, query filters), índices, failure modes, cobertura de testes | Antes de qualquer mudança em entidades tenant-owned, `IgnoreQueryFilters()` ou middleware |
+| `docs/security.md` | Auth lifecycle (JWT + refresh token), policies RBAC, rate limiting, security headers, CORS, auditabilidade, checklist de produção | Antes de implementar ou alterar qualquer fluxo de autenticação/autorização |
+| `docs/runbook.md` | Startup local e Docker, demo flow para recrutadores, comandos úteis (migrations, build, test), incidents comuns, reset de ambiente | Para rodar o projeto, demo, troubleshooting ou reset |
+| `docs/adr-001-multi-tenancy.md` | Decisão: shared-database com header + claim enforcement; alternativas rejeitadas | Antes de propor mudança no modelo de tenancy |
+| `docs/adr-002-caching.md` | Decisão: Redis para `usage:{id}` e `subscription:{id}`; invalidação em writes e jobs | Antes de adicionar ou alterar estratégias de cache |
+| `docs/adr-003-background-jobs.md` | Decisão: Quartz.NET in-process; alternativas rejeitadas | Antes de adicionar ou refatorar jobs |
+
+## Agentes disponíveis (Claude Code)
+
+Use o `Agent` tool com o `subagent_type` adequado para cada situação. Sempre prefira o agente especializado ao invés do general-purpose.
+
+| Agente | Quando usar neste projeto |
+|---|---|
+| `Explore` | Busca rápida de arquivos, padrões, keywords no codebase |
+| `Plan` | Antes de implementar features complexas — planejar arquitetura e trade-offs |
+| `backend-architect` | Novos endpoints, handlers MediatR, entidades de domínio, migrations EF Core |
+| `lucas-frontend-engineer` | Novos componentes React, páginas, hooks, integração com TanStack Query |
+| `postgres-architect` | Modelagem de schema, migrations, índices, otimização de queries SQL Server |
+| `qa-engineer` | Criar testes unitários e de integração, PRs, casos de borda |
+| `code-quality-reviewer` | Após implementar qualquer feature — revisar antes de commitar |
+| `security-hardening-validator` | Após implementar auth, endpoints, file uploads, qualquer surface sensível |
+| `architecture-advisor` | Decisões de refatoração, novos padrões, trade-offs de design |
+| `devops-deploy-architect` | Dockerfile, CI/CD GitHub Actions, health checks, configuração de produção |
+| `sre-observability` | Logging (Serilog), OpenTelemetry, Jaeger, métricas, alertas |
+| `tech-lead-orchestrator` | Revisão pré-deploy, decisões cross-cutting (auth flow, API design) |
+| `dx-docs-writer` | Após features novas — atualizar README, runbook, ADRs em `docs/` |
+| `llm-integration-architect` | Se adicionar IA/LLM ao projeto |
+| `claude-code-guide` | Dúvidas sobre Claude Code CLI, hooks, MCP servers, keybindings |
+
+## MCPs disponíveis
+
+### Documentação e pesquisa
+| MCP | Uso neste projeto |
+|---|---|
+| `mcp__context7__query-docs` | Buscar docs atualizadas de EF Core, ASP.NET, React, TanStack Query, Tailwind |
+| `mcp__Ref__ref_read_url` / `ref_search_documentation` | Ler docs de qualquer biblioteca por URL |
+| `mcp__awslabs-docs__search_documentation` | Documentação AWS quando usar serviços cloud |
+| `mcp__exa__web_search_exa` | Pesquisa web para soluções técnicas e exemplos |
+| `mcp__firecrawl-mcp__firecrawl_scrape` | Scraping de páginas de docs externas |
+
+### UI / Design
+| MCP | Uso neste projeto |
+|---|---|
+| `mcp__figma__get_design_context` | Importar designs Figma para replicar no frontend |
+| `mcp__shadcn-ui__get_component` | Buscar componentes shadcn/ui compatíveis com Tailwind |
+| `mcp__magic-mcp__21st_magic_component_builder` | Gerar componentes UI complexos com prompt |
+| `mcp__magicuidesign__searchRegistryItems` | Buscar animações e componentes premium |
+| `mcp__stitch__generate_screen_from_text` | Gerar mockups de telas para novas páginas |
+
+### Browser / QA
+| MCP | Uso neste projeto |
+|---|---|
+| `mcp__playwright__browser_navigate` | Testes E2E e smoke tests da aplicação rodando localmente |
+| `mcp__chrome-devtools__take_screenshot` | Capturar screenshots para validar UI |
+| `mcp__chrome-devtools__lighthouse_audit` | Auditoria de performance/acessibilidade do frontend |
+
+### AWS / Infra
+| MCP | Uso neste projeto |
+|---|---|
+| `mcp__awslabs-iam__*` | Gerenciar IAM quando fazer deploy na AWS |
+| `mcp__awslabs-dynamodb__dynamodb_data_modeling` | Se migrar para DynamoDB |
+| `mcp__awslabs-api__call_aws` | Executar comandos AWS diretamente |
+| `mcp__netlify__*` | Deploy do frontend na Netlify |
+| `mcp__supabase__*` | Se migrar banco para Supabase |
+
+### Produtividade
+| MCP | Uso neste projeto |
+|---|---|
+| `mcp__sequential-thinking__sequentialthinking` | Problemas complexos que precisam de raciocínio passo-a-passo |
+| `mcp__notebooklm-mcp__notebook_create` | Criar notebook de pesquisa para ADRs complexos |
+
 ## Git workflow
 
 **Após cada tarefa concluída, crie um commit e envie para o repositório remoto:**
