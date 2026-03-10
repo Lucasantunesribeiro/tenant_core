@@ -45,7 +45,8 @@ internal sealed class CreateClientCommandHandler(
             request.Notes.Trim());
 
         await dbContext.Clients.AddAsync(client, cancellationToken);
-        await auditService.WriteAsync("client.created", "Client", client.Id.ToString(), request, cancellationToken);
+        await auditService.WriteAsync("client.created", "Client", client.Id.ToString(),
+            new { request.Name, request.Email, request.ContactName, request.Status }, cancellationToken);
         await cacheService.RemoveAsync($"usage:{client.TenantId}", cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 

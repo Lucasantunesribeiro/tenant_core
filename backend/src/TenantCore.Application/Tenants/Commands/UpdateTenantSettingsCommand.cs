@@ -50,7 +50,8 @@ internal sealed class UpdateTenantSettingsCommandHandler(
             request.AllowedDomains.Trim(),
             clock.UtcNow);
 
-        await auditService.WriteAsync("tenant.settings_updated", "Tenant", tenant.Id.ToString(), request, cancellationToken);
+        await auditService.WriteAsync("tenant.settings_updated", "Tenant", tenant.Id.ToString(),
+            new { request.Name, request.BillingEmail, request.SupportEmail, request.TimeZone, request.Theme }, cancellationToken);
         await cacheService.RemoveAsync($"subscription:{tenantId}", cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }

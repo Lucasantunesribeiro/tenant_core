@@ -51,7 +51,8 @@ internal sealed class UpdateTaskCommandHandler(
             request.DueDate,
             clock.UtcNow);
 
-        await auditService.WriteAsync("task.updated", "Task", task.Id.ToString(), request, cancellationToken);
+        await auditService.WriteAsync("task.updated", "Task", task.Id.ToString(),
+            new { request.Title, request.Status, request.Priority, request.ProjectId, request.AssigneeUserId }, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

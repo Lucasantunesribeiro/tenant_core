@@ -63,7 +63,8 @@ internal sealed class CreateTaskCommandHandler(
             request.DueDate);
 
         await dbContext.Tasks.AddAsync(task, cancellationToken);
-        await auditService.WriteAsync("task.created", "Task", task.Id.ToString(), request, cancellationToken);
+        await auditService.WriteAsync("task.created", "Task", task.Id.ToString(),
+            new { request.Title, request.Status, request.Priority, request.ProjectId, request.AssigneeUserId }, cancellationToken);
         await cacheService.RemoveAsync($"usage:{task.TenantId}", cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 

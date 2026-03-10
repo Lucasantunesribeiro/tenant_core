@@ -77,7 +77,8 @@ internal sealed class CreateProjectCommandHandler(
             request.DueDate);
 
         await dbContext.Projects.AddAsync(project, cancellationToken);
-        await auditService.WriteAsync("project.created", "Project", project.Id.ToString(), request, cancellationToken);
+        await auditService.WriteAsync("project.created", "Project", project.Id.ToString(),
+            new { request.Name, request.Code, request.Status, request.ClientId, request.OwnerUserId }, cancellationToken);
         await cacheService.RemoveAsync($"usage:{project.TenantId}", cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 

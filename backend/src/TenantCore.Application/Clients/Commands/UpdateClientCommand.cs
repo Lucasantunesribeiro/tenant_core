@@ -48,7 +48,8 @@ internal sealed class UpdateClientCommandHandler(
             request.Notes.Trim(),
             clock.UtcNow);
 
-        await auditService.WriteAsync("client.updated", "Client", client.Id.ToString(), request, cancellationToken);
+        await auditService.WriteAsync("client.updated", "Client", client.Id.ToString(),
+            new { request.Name, request.Email, request.ContactName, request.Status }, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

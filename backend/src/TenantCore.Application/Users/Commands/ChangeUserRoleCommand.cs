@@ -30,9 +30,11 @@ internal sealed class ChangeUserRoleCommandHandler(
         var user = await dbContext.Users.SingleOrDefaultAsync(x => x.Id == request.UserId, cancellationToken)
             ?? throw new AppException("user_not_found", "User not found", 404, "The requested user does not exist.");
 
+        var previousRole = user.Role;
         user.ChangeRole(request.Role, clock.UtcNow);
 
-        await auditService.WriteAsync("user.role_changed", "User", user.Id.ToString(), new { request.Role }, cancellationToken);
+        await auditService.WriteAsync("user.role_changed", "User", user.Id.ToString(),
+            new { PreviousRole = previousRole, NewRole = request.Role }, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

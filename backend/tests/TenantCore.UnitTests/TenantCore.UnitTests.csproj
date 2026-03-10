@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\TenantCore.Api\TenantCore.Api.csproj" />
     <ProjectReference Include="..\..\src\TenantCore.Application\TenantCore.Application.csproj" />
     <ProjectReference Include="..\..\src\TenantCore.Domain\TenantCore.Domain.csproj" />
     <ProjectReference Include="..\..\src\TenantCore.Infrastructure\TenantCore.Infrastructure.csproj" />
