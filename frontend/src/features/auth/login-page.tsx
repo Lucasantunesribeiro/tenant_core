@@ -131,7 +131,7 @@ export function LoginPage() {
           </div>
 
           <div className="relative z-10 text-white/50 text-xs">
-            © 2024 TenantCore. Todos os direitos reservados.
+            © 2026 TenantCore. Todos os direitos reservados.
           </div>
         </div>
 
@@ -150,10 +150,11 @@ export function LoginPage() {
             }}
           >
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-slate-700">E-mail</label>
+              <label htmlFor="email" className="text-sm font-semibold text-slate-700">E-mail</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xl">mail</span>
                 <input
+                  id="email"
                   type="email"
                   placeholder="admin@empresa.com"
                   value={values.email}
@@ -165,10 +166,11 @@ export function LoginPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-slate-700">Senha</label>
+              <label htmlFor="password" className="text-sm font-semibold text-slate-700">Senha</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xl">lock</span>
                 <input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••••••"
                   value={values.password}
@@ -189,10 +191,11 @@ export function LoginPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-slate-700">ID do Tenant</label>
+              <label htmlFor="tenantId" className="text-sm font-semibold text-slate-700">ID do Tenant</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xl">domain</span>
                 <input
+                  id="tenantId"
                   type="text"
                   placeholder="11111111-1111-1111-1111-111111111111"
                   value={values.tenantId}
@@ -220,8 +223,7 @@ export function LoginPage() {
           </form>
 
           <p className="mt-8 text-center text-sm text-slate-500">
-            Senha padrão para todas as contas:{' '}
-            <span className="font-bold text-slate-900">Passw0rd!</span>
+            Use as contas de demonstração ao lado para acesso rápido.
           </p>
         </div>
       </div>

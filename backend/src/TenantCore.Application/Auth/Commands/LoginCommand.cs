@@ -53,7 +53,7 @@ internal sealed class LoginCommandHandler(
             ?? throw new AppException("tenant_not_found", "Tenant not found", 404, "The provided tenant does not exist.");
 
         var user = await dbContext.Users
-            .SingleOrDefaultAsync(x => x.Email == request.Email.Trim().ToLowerInvariant(), cancellationToken)
+            .SingleOrDefaultAsync(x => x.Email == request.Email.Trim().ToLowerInvariant() && x.TenantId == tenantId, cancellationToken)
             ?? throw new AppException("invalid_credentials", "Invalid credentials", 401, "The provided credentials are invalid.");
 
         if (!passwordService.Verify(request.Password, user.PasswordHash))

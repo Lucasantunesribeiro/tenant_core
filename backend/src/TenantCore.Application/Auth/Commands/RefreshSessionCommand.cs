@@ -38,13 +38,14 @@ internal sealed class RefreshSessionCommandHandler(
             .SingleAsync(x => x.Id == existingToken.UserId, cancellationToken);
 
         var bundle = tokenService.CreateTokenBundle(user);
-        existingToken.Rotate(tokenService.HashRefreshToken(bundle.RefreshToken), clock.UtcNow);
+        var newTokenHash = tokenService.HashRefreshToken(bundle.RefreshToken);
+        existingToken.Rotate(newTokenHash, clock.UtcNow);
 
         await dbContext.RefreshTokens.AddAsync(
             new RefreshToken(
                 tenantId,
                 user.Id,
-                tokenService.HashRefreshToken(bundle.RefreshToken),
+                newTokenHash,
                 bundle.RefreshTokenExpiresAtUtc,
                 string.Empty,
                 string.Empty),

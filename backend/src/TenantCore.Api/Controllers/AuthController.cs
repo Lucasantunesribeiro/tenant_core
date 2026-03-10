@@ -63,10 +63,12 @@ public sealed class AuthController : ApiControllerBase
 
     private void SetRefreshTokenCookie(string refreshToken, DateTimeOffset expiresAtUtc)
     {
+        // Secure = true always; local dev must use HTTPS or a reverse proxy that sets the flag.
+        // Never rely on Request.IsHttps — it returns false behind plain-HTTP Docker proxies.
         Response.Cookies.Append(CookieNames.RefreshToken, refreshToken, new CookieOptions
         {
             HttpOnly = true,
-            Secure = Request.IsHttps,
+            Secure = true,
             SameSite = SameSiteMode.Lax,
             Expires = expiresAtUtc.UtcDateTime,
             IsEssential = true

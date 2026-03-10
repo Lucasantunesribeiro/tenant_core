@@ -3,6 +3,11 @@
 .env.*
 !.env.example
 
+# ─── .NET production secrets (never commit real credentials) ─────────────────
+appsettings.Production.json
+appsettings.Staging.json
+secrets.json
+
 # ─── .NET / C# ───────────────────────────────────────────────────────────────
 bin/
 obj/

@@ -75,12 +75,12 @@ describe('UsersPage', () => {
     renderWithProviders(<UsersPage />)
 
     await screen.findByText('Ava Stone')
-    await user.click(screen.getByRole('button', { name: 'Invite user' }))
-    await user.type(screen.getByLabelText('Full name'), 'Lena Cole')
-    await user.type(screen.getByLabelText('Email'), 'lena@acme.test')
-    await user.clear(screen.getByLabelText('Temporary password'))
-    await user.type(screen.getByLabelText('Temporary password'), 'Passw0rd!')
-    await user.click(screen.getByRole('button', { name: 'Create user' }))
+    await user.click(screen.getByRole('button', { name: 'Convidar usuário' }))
+    await user.type(screen.getByLabelText('Nome completo'), 'Lena Cole')
+    await user.type(screen.getByLabelText('E-mail'), 'lena@acme.test')
+    await user.clear(screen.getByLabelText('Senha temporária'))
+    await user.type(screen.getByLabelText('Senha temporária'), 'Passw0rd!')
+    await user.click(screen.getByRole('button', { name: 'Criar usuário' }))
     const submission = createMock.mock.results[0]?.value
 
     if (submission && typeof submission.then === 'function') {
@@ -95,7 +95,7 @@ describe('UsersPage', () => {
 
     expect(await screen.findByText('Plan limit reached for the Free plan.')).toBeInTheDocument()
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Create user' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Criar usuário' })).toBeEnabled()
     })
   })
 })

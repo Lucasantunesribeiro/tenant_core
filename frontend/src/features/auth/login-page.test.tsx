@@ -53,13 +53,13 @@ describe('LoginPage', () => {
       },
     )
 
-    await user.clear(screen.getByLabelText('Email'))
-    await user.type(screen.getByLabelText('Email'), 'admin@globex.test')
-    await user.clear(screen.getByLabelText('Password'))
-    await user.type(screen.getByLabelText('Password'), 'Passw0rd!')
-    await user.clear(screen.getByPlaceholderText('11111111-1111-1111-1111-111111111111'))
-    await user.type(screen.getByPlaceholderText('11111111-1111-1111-1111-111111111111'), '22222222-2222-2222-2222-222222222222')
-    await user.click(screen.getByRole('button', { name: 'Enter workspace' }))
+    await user.clear(screen.getByLabelText('E-mail'))
+    await user.type(screen.getByLabelText('E-mail'), 'admin@globex.test')
+    await user.clear(screen.getByLabelText('Senha'))
+    await user.type(screen.getByLabelText('Senha'), 'Passw0rd!')
+    await user.clear(screen.getByLabelText('ID do Tenant'))
+    await user.type(screen.getByLabelText('ID do Tenant'), '22222222-2222-2222-2222-222222222222')
+    await user.click(screen.getByRole('button', { name: 'Entrar no Dashboard' }))
 
     await waitFor(() => {
       expect(loginRequestMock).toHaveBeenCalledWith(
