@@ -218,7 +218,7 @@ export function LoginPage() {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-bold text-white shadow-lg shadow-primary/20 transition active:scale-[0.98] hover:bg-primary/90 disabled:opacity-50"
             >
               <span>{loginMutation.isPending ? 'Entrando...' : 'Entrar no Dashboard'}</span>
-              <span className="material-symbols-outlined text-[18px]">login</span>
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">login</span>
             </button>
           </form>
 
