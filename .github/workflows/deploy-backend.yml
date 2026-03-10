@@ -33,6 +33,9 @@ jobs:
   build-test:
     name: Build and test (.NET)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write  # required by dorny/test-reporter to create check runs
     defaults:
       run:
         working-directory: backend
