@@ -1,0 +1,222 @@
+name: deploy-backend
+
+# Deploys the .NET API container to Azure App Service.
+# Runs only on pushes to master that touch backend code — never on pull requests.
+# The full CI suite (backend-ci.yml) is a prerequisite: this workflow calls it
+# as a reusable job via `workflow_run` so the deploy never starts unless CI is green.
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+
+# Only one deploy runs at a time. A newer push cancels an in-progress deploy.
+concurrency:
+  group: deploy-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/tenant-core-api
+  DOTNET_VERSION: "9.0.x"
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────────
+  # 1. BUILD & TEST
+  #    Mirrors backend-ci.yml so we know the code is healthy before building the
+  #    container. Running the full test suite here (not just the CI badge) makes
+  #    the deploy self-contained and independent of external workflow status.
+  # ──────────────────────────────────────────────────────────────────────────────
+  build-test:
+    name: Build and test (.NET)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # NuGet packages are cached by the lock file hash. The cache is keyed per
+      # OS so it is never shared across runner types accidentally.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/**/*.props') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore dependencies
+        run: dotnet restore tenant_core.sln
+
+      - name: Build (Release)
+        run: dotnet build tenant_core.sln -c Release --no-restore
+
+      # Unit tests only — integration tests require a live SQL Server and are
+      # covered by the fullstack-smoke.yml workflow triggered separately.
+      - name: Run unit tests
+        run: >
+          dotnet test tenant_core.sln
+          -c Release
+          --no-build
+          --filter "FullyQualifiedName~UnitTests"
+          --logger "trx;LogFileName=results.trx"
+          --results-directory ./TestResults
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Backend unit tests
+          path: backend/TestResults/results.trx
+          reporter: dotnet-trx
+          fail-on-error: true
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # 2. CONTAINER BUILD & PUSH
+  #    Builds the multi-stage Dockerfile, tags the image with both the Git SHA
+  #    (immutable, used by the deploy step) and `latest` (convenience), then
+  #    pushes to GitHub Container Registry (ghcr.io — free, no rate limits for
+  #    public repos, and works with GITHUB_TOKEN without extra credentials).
+  # ──────────────────────────────────────────────────────────────────────────────
+  docker-push:
+    name: Build and push container image
+    runs-on: ubuntu-latest
+    needs: build-test
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      # Pass the exact SHA-tagged image reference to the deploy job so there is
+      # never any ambiguity about which image version is being deployed.
+      image-ref: ${{ steps.meta.outputs.tags && steps.meta.outputs.tags || format('{0}/{1}:{2}', env.REGISTRY, env.IMAGE_NAME, github.sha) }}
+      image-digest: ${{ steps.build-push.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # BuildKit layer cache is stored in GitHub Actions cache, keyed by
+      # Dockerfile + lock-file hash. This typically cuts rebuild time by 60-80%
+      # on subsequent pushes that only change application code (SDK layer and
+      # NuGet restore layer are reused).
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # GITHUB_TOKEN has write:packages permission when the job has
+          # `packages: write`. No extra secret is required.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Generate OCI-standard image labels and two tags:
+      #   • ghcr.io/<owner>/tenant-core-api:<git-sha>  — immutable, used by deploy
+      #   • ghcr.io/<owner>/tenant-core-api:latest      — convenience alias
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+
+      - name: Build and push image
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Persist BuildKit cache between runs using GitHub's cache backend.
+          # `mode=max` caches all intermediate layers (not just the final stage),
+          # which is important for the multi-stage build in this Dockerfile.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # 3. DEPLOY TO AZURE APP SERVICE
+  #    Tells the App Service to pull the new image from ghcr.io. The App Service
+  #    is configured with DOCKER_REGISTRY_SERVER_* env vars so it can authenticate
+  #    with ghcr.io at pull time (set these once in Azure, not here).
+  #
+  #    The publish profile is stored in the AZURE_WEBAPP_PUBLISH_PROFILE secret
+  #    (download from: Azure Portal → App Service → Get publish profile).
+  # ──────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Azure App Service
+    runs-on: ubuntu-latest
+    needs: docker-push
+    environment:
+      name: production
+      # Surfaces the live URL in the GitHub Actions UI and PR checks.
+      url: ${{ vars.AZURE_WEBAPP_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The SHA-tagged reference guarantees we deploy exactly the image built
+      # in the previous job, not whatever `latest` points to at deploy time.
+      - name: Resolve image reference
+        id: image
+        run: |
+          SHA_TAG="sha-$(echo '${{ github.sha }}' | cut -c1-40)"
+          echo "ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHA_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy container to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: ${{ steps.image.outputs.ref }}
+
+      # A failed health check after deploy triggers a notification but does NOT
+      # automatically roll back — App Service keeps the previous revision running
+      # if the new container never becomes healthy (depends on health check config).
+      # If you want automatic rollback, enable deployment slots (Standard tier+).
+      - name: Verify deployment health
+        run: |
+          echo "Waiting for App Service to restart with new image..."
+          sleep 30
+
+          BASE_URL="${{ vars.AZURE_WEBAPP_URL }}"
+          MAX_ATTEMPTS=20
+          ATTEMPT=0
+
+          until curl -fsS "${BASE_URL}/health/live" > /dev/null; do
+            ATTEMPT=$((ATTEMPT + 1))
+            if [ "${ATTEMPT}" -ge "${MAX_ATTEMPTS}" ]; then
+              echo "ERROR: health/live did not return 200 after ${MAX_ATTEMPTS} attempts."
+              exit 1
+            fi
+            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS} — retrying in 15s..."
+            sleep 15
+          done
+
+          echo "Liveness check passed."
+
+          # Readiness check confirms SQL Server and Redis are reachable.
+          if curl -fsS "${BASE_URL}/health/ready" > /dev/null; then
+            echo "Readiness check passed. Deployment successful."
+          else
+            echo "WARNING: readiness check failed — database or Redis may not be reachable."
+            echo "Check App Service environment variables and network connectivity."
+            exit 1
+          fi

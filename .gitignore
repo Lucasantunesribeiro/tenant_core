@@ -4,7 +4,8 @@
 !.env.example
 
 # ─── .NET production secrets (never commit real credentials) ─────────────────
-appsettings.Production.json
+# appsettings.Production.json is committed with empty placeholder values only —
+# actual secrets are injected via Azure App Service environment variables.
 appsettings.Staging.json
 secrets.json
 

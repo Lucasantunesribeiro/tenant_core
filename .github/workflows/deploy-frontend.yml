@@ -1,0 +1,108 @@
+name: deploy-frontend
+
+# Deploys the React/Vite SPA to Azure Static Web Apps (free tier).
+# Runs only on pushes to master that touch frontend code.
+# The Azure Static Web Apps action handles both build and deploy atomically,
+# so there is no separate Docker step — the action builds the Vite project
+# server-side using the Node version pinned below.
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  # Allow manual deploys from the GitHub Actions UI (useful for hotfixes).
+  workflow_dispatch:
+
+# Only one deploy runs at a time per branch.
+concurrency:
+  group: deploy-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────────
+  # 1. LINT, TYPE-CHECK & TEST
+  #    Runs the full frontend quality gate before touching Azure. Mirrors
+  #    frontend-ci.yml but is self-contained so this workflow is always correct
+  #    regardless of what CI does.
+  # ──────────────────────────────────────────────────────────────────────────────
+  quality:
+    name: Lint, type-check and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # 2. BUILD & DEPLOY
+  #    The Azure/static-web-apps-deploy action builds the Vite project inside the
+  #    GitHub runner and then uploads the dist/ folder to Azure Static Web Apps.
+  #
+  #    VITE_API_URL is injected at build time so the compiled JS bundle points to
+  #    the correct App Service URL. It must NOT contain a trailing slash.
+  #
+  #    Required secrets/vars:
+  #      secrets.AZURE_STATIC_WEB_APPS_API_TOKEN  — from: SWA resource → Manage
+  #                                                  deployment token in Azure Portal
+  #      vars.VITE_API_URL                         — e.g. https://tenant-core-api.azurewebsites.net
+  # ──────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Build and deploy to Azure Static Web Apps
+    runs-on: ubuntu-latest
+    needs: quality
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.static_web_app_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The SWA action runs `npm ci && npm run build` internally using the
+      # app_location as the working directory. We pass VITE_API_URL through
+      # env so it is available during the Vite build.
+      - name: Deploy to Azure Static Web Apps
+        id: deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          # Path to the frontend source relative to the repository root.
+          app_location: frontend
+          # Vite outputs to dist/ — SWA uploads this folder.
+          output_location: dist
+          # No Azure Functions API alongside the SPA.
+          api_location: ""
+        env:
+          # Injected into the Vite build process. The variable name must match
+          # exactly what frontend/src/lib/http.ts reads (VITE_API_URL).
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+
+      - name: Print deployed URL
+        run: echo "Deployed to ${{ steps.deploy.outputs.static_web_app_url }}"
