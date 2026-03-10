@@ -12,7 +12,7 @@ using TenantCore.Infrastructure.Database;
 namespace TenantCore.Infrastructure.Database.Migrations
 {
     [DbContext(typeof(TenantCoreDbContext))]
-    [Migration("20260310171248_InitialCreate")]
+    [Migration("20260310175811_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -59,7 +59,7 @@ namespace TenantCore.Infrastructure.Database.Migrations
 
                     b.Property<string>("MetadataJson")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("OccurredAtUtc")
                         .HasColumnType("timestamp with time zone");

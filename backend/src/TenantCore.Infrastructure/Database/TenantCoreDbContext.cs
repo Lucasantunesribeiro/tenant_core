@@ -194,7 +194,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.EntityType).HasMaxLength(80);
             entity.Property(x => x.EntityId).HasMaxLength(80);
             entity.Property(x => x.CorrelationId).HasMaxLength(120);
-            entity.Property(x => x.MetadataJson).HasColumnType("nvarchar(max)");
+            entity.Property(x => x.MetadataJson).HasColumnType("text");
             entity.HasIndex(x => new { x.TenantId, x.OccurredAtUtc });
             entity.HasIndex(x => new { x.TenantId, x.Action, x.EntityType });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);

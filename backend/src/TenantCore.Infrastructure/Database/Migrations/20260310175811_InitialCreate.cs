@@ -63,7 +63,7 @@ namespace TenantCore.Infrastructure.Database.Migrations
                     EntityType = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
                     EntityId = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
                     CorrelationId = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    MetadataJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    MetadataJson = table.Column<string>(type: "text", nullable: false),
                     OccurredAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
