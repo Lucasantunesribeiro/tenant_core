@@ -4,6 +4,38 @@
 
 This is intentionally not a toy CRUD sample. The platform models how an operations-focused workspace SaaS behaves when multiple companies share the same backend safely and each company needs its own users, projects, tasks, clients, subscription state, usage tracking, and audit trail.
 
+## Live demo
+
+The application is fully deployed on Azure. No setup required — open and explore.
+
+| Component | URL |
+| --- | --- |
+| **Frontend** | https://purple-dune-018763b0f.4.azurestaticapps.net |
+| **API (health live)** | https://tenant-core-api.azurewebsites.net/health/live |
+| **API (health ready)** | https://tenant-core-api.azurewebsites.net/health/ready |
+
+### Demo credentials
+
+Password for all accounts: `Passw0rd!`
+
+| Tenant | Tenant ID | Email | Role |
+| --- | --- | --- | --- |
+| Acme Operations | `11111111-1111-1111-1111-111111111111` | `admin@acme.test` | Admin |
+| Acme Operations | `11111111-1111-1111-1111-111111111111` | `manager@acme.test` | Manager |
+| Acme Operations | `11111111-1111-1111-1111-111111111111` | `user@acme.test` | User |
+| Globex Advisory | `22222222-2222-2222-2222-222222222222` | `admin@globex.test` | Admin |
+
+### Infrastructure
+
+| Service | Provider |
+| --- | --- |
+| Backend API | Azure App Service B1 Linux (container) |
+| Frontend | Azure Static Web Apps |
+| Database | Neon PostgreSQL (serverless) |
+| Cache | Upstash Redis |
+| Container registry | GitHub Container Registry (ghcr.io) |
+| CI/CD | GitHub Actions |
+
 ## What it demonstrates
 
 - .NET 9 Web API with Controllers, MediatR, FluentValidation, ProblemDetails, Swagger, Quartz.NET, Serilog, OpenTelemetry, EF Core, SQL Server, Redis, JWT, and refresh token rotation
@@ -148,22 +180,18 @@ The frontend defaults to `http://localhost:5000` for the API through `VITE_API_U
 - Redis caches subscription and usage dashboard responses and is invalidated on writes and scheduled recomputation.
 - Quartz jobs maintain usage snapshots, quota warning state, and cleanup tasks.
 
-## Deployment preparation
+## Deployment
 
-The repository includes a local container stack, CI workflows, migrations, and observability wiring so the app can move into a cloud deployment path without redesigning the codebase.
+The application is live on Azure. The CI/CD pipeline builds, tests, and deploys automatically on every push to `master`.
 
-Recommended AWS target:
+| Component | URL |
+| --- | --- |
+| Frontend | https://purple-dune-018763b0f.4.azurestaticapps.net |
+| API | https://tenant-core-api.azurewebsites.net |
+| Health live | https://tenant-core-api.azurewebsites.net/health/live |
+| Health ready | https://tenant-core-api.azurewebsites.net/health/ready |
 
-- ECS Fargate services for `api` and `web`
-- Application Load Balancer in front of the services
-- Amazon RDS for SQL Server
-- ElastiCache for Redis
-- OTEL collector sidecar or dedicated collector service
-
-Useful official AWS references:
-
-- ECS with Application Load Balancer: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/alb.html
-- ECS on AWS Fargate: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html
+Pipelines: `.github/workflows/deploy-backend.yml` and `.github/workflows/deploy-frontend.yml`.
 
 ## Documentation map
 
