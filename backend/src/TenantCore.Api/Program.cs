@@ -194,19 +194,20 @@ try
 
     var app = builder.Build();
 
-    // Trust X-Forwarded-For from Docker/proxy networks so RemoteIpAddress reflects the real client IP.
-    // Restrict to known private ranges to prevent X-Forwarded-For spoofing from the internet.
-    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    // Trust X-Forwarded-For/Proto from Azure App Service's internal proxy.
+    // Azure terminates TLS at the load balancer; the container receives plain HTTP internally.
+    // KnownNetworks is cleared so the middleware trusts Azure's proxy regardless of its IP,
+    // which may fall outside RFC-1918 ranges (e.g. 100.64.0.0/10 shared address space).
+    // The outer security perimeter is Azure's responsibility; spoofing is not possible
+    // from the internet since clients cannot reach the container directly.
+    var forwardedOptions = new ForwardedHeadersOptions
     {
         ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-        KnownNetworks =
-        {
-            new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("10.0.0.0"), 8),
-            new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("172.16.0.0"), 12),
-            new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse("192.168.0.0"), 16),
-        },
         ForwardLimit = 1,
-    });
+    };
+    forwardedOptions.KnownNetworks.Clear();
+    forwardedOptions.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwardedOptions);
 
     await app.Services.InitializeDatabaseAsync();
 
