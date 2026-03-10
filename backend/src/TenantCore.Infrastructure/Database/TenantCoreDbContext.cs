@@ -54,7 +54,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.TimeZone).HasMaxLength(80);
             entity.Property(x => x.Theme).HasMaxLength(40);
             entity.Property(x => x.AllowedDomains).HasMaxLength(500);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.Property(x => x.RowVersion).IsConcurrencyToken();
             entity.HasIndex(x => x.Slug).IsUnique();
         });
     }
@@ -69,7 +69,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.FullName).HasMaxLength(120);
             entity.Property(x => x.PasswordHash).HasMaxLength(500);
             entity.Property(x => x.Role).HasConversion<string>().HasMaxLength(20);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.Property(x => x.RowVersion).IsConcurrencyToken();
             entity.HasIndex(x => new { x.TenantId, x.Email }).IsUnique();
             entity.HasIndex(x => new { x.TenantId, x.Role });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
@@ -104,7 +104,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.Code).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.Name).HasMaxLength(60);
             entity.Property(x => x.Description).HasMaxLength(240);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.Property(x => x.RowVersion).IsConcurrencyToken();
             entity.HasIndex(x => x.Code).IsUnique();
         });
 
@@ -116,7 +116,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.QuotaState).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.WarningMessage).HasMaxLength(240);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.Property(x => x.RowVersion).IsConcurrencyToken();
             entity.HasIndex(x => x.TenantId).IsUnique();
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
             entity.HasQueryFilter(x => CurrentTenantId != Guid.Empty && x.TenantId == CurrentTenantId);
@@ -143,7 +143,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.ContactName).HasMaxLength(120);
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.Notes).HasMaxLength(500);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.Property(x => x.RowVersion).IsConcurrencyToken();
             entity.HasIndex(x => new { x.TenantId, x.Name });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
             entity.HasQueryFilter(x => CurrentTenantId != Guid.Empty && x.TenantId == CurrentTenantId);
@@ -157,7 +157,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.Code).HasMaxLength(20);
             entity.Property(x => x.Description).HasMaxLength(600);
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.Property(x => x.RowVersion).IsConcurrencyToken();
             entity.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
             entity.HasIndex(x => new { x.TenantId, x.Status });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
@@ -174,7 +174,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.Description).HasMaxLength(600);
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.Priority).HasConversion<string>().HasMaxLength(20);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            entity.Property(x => x.RowVersion).IsConcurrencyToken();
             entity.HasIndex(x => new { x.TenantId, x.ProjectId, x.Status });
             entity.HasIndex(x => new { x.TenantId, x.AssigneeUserId });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
