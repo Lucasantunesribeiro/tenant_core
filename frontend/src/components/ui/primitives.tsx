@@ -124,12 +124,11 @@ export function Badge({ tone = 'default', children }: PropsWithChildren<{ tone?:
 export function MetricCard({
   label,
   value,
-  accent: _accent,
   detail,
 }: {
   label: string
   value: string | number
-  accent: string
+  accent?: string
   detail?: string
 }) {
   return (
