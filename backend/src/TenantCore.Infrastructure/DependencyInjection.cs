@@ -4,10 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 using StackExchange.Redis;
 using TenantCore.Application.Common.Abstractions;
+using TenantCore.Application.Reports;
 using TenantCore.Infrastructure.Auth;
 using TenantCore.Infrastructure.Caching;
 using TenantCore.Infrastructure.Clock;
 using TenantCore.Infrastructure.Database;
+using TenantCore.Infrastructure.Database.Repositories;
 using TenantCore.Infrastructure.Database.Seed;
 using TenantCore.Infrastructure.HealthChecks;
 using TenantCore.Infrastructure.Jobs;
@@ -19,6 +21,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        DapperConfig.RegisterTypeHandlers();
+
         services.AddHttpContextAccessor();
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
@@ -37,6 +41,7 @@ public static class DependencyInjection
             }));
 
         services.AddScoped<ITenantCoreDbContext>(sp => sp.GetRequiredService<TenantCoreDbContext>());
+        services.AddScoped<ITenantDashboardRepository, TenantDashboardRepository>();
         services.AddScoped<ICurrentSession, HttpCurrentSession>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IPasswordService, PasswordService>();
