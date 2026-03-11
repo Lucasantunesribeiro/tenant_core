@@ -20,6 +20,7 @@ using TenantCore.Api.Controllers;
 using TenantCore.Api.Middleware;
 using TenantCore.Application;
 using TenantCore.Application.Common.Abstractions;
+using TenantCore.Application.Reports;
 using TenantCore.Application.Common.Models;
 using TenantCore.Application.Common.Security;
 using TenantCore.Infrastructure.Auth;
@@ -131,6 +132,8 @@ internal sealed class TenantCoreApiTestHost : IAsyncDisposable
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<TenantCoreDbContext>("sqlserver", tags: new[] { "ready" })
             .AddCheck("redis", () => HealthCheckResult.Healthy(), tags: new[] { "ready" });
+
+        builder.Services.AddScoped<ITenantDashboardRepository, NullTenantDashboardRepository>();
 
         var app = builder.Build();
 
@@ -245,6 +248,12 @@ internal sealed class TenantCoreApiTestHost : IAsyncDisposable
         Client.Dispose();
         await _app.DisposeAsync();
     }
+}
+
+internal sealed class NullTenantDashboardRepository : ITenantDashboardRepository
+{
+    public Task<TenantProjectDashboard> GetAsync(Guid tenantId, CancellationToken cancellationToken = default)
+        => Task.FromResult(new TenantProjectDashboard(tenantId, string.Empty, string.Empty, []));
 }
 
 internal sealed class TestCacheService : ICacheService
