@@ -30,10 +30,10 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("Connection string 'Redis' is missing.");
 
         services.AddDbContext<TenantCoreDbContext>(options =>
-            options.UseNpgsql(sqlConnection, pg =>
+            options.UseSqlServer(sqlConnection, sql =>
             {
-                pg.MigrationsAssembly(typeof(TenantCoreDbContext).Assembly.FullName);
-                pg.EnableRetryOnFailure();
+                sql.MigrationsAssembly(typeof(TenantCoreDbContext).Assembly.FullName);
+                sql.EnableRetryOnFailure();
             }));
 
         services.AddScoped<ITenantCoreDbContext>(sp => sp.GetRequiredService<TenantCoreDbContext>());
@@ -47,7 +47,7 @@ public static class DependencyInjection
         services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnection));
         services.AddHealthChecks()
-            .AddDbContextCheck<TenantCoreDbContext>("postgres", tags: new[] { "ready" })
+            .AddDbContextCheck<TenantCoreDbContext>("sqlserver", tags: new[] { "ready" })
             .AddCheck<RedisHealthCheck>("redis", tags: new[] { "ready" });
 
         services.AddQuartz(q =>

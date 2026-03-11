@@ -15,16 +15,16 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "SubscriptionPlans",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Code = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Name = table.Column<string>(type: "character varying(60)", maxLength: 60, nullable: false),
-                    Description = table.Column<string>(type: "character varying(240)", maxLength: 240, nullable: false),
-                    MaxUsers = table.Column<int>(type: "integer", nullable: false),
-                    MaxProjects = table.Column<int>(type: "integer", nullable: false),
-                    MaxClients = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(60)", maxLength: 60, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(240)", maxLength: 240, nullable: false),
+                    MaxUsers = table.Column<int>(type: "int", nullable: false),
+                    MaxProjects = table.Column<int>(type: "int", nullable: false),
+                    MaxClients = table.Column<int>(type: "int", nullable: false),
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -35,18 +35,18 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "Tenants",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    Slug = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
-                    BillingEmail = table.Column<string>(type: "character varying(180)", maxLength: 180, nullable: false),
-                    SupportEmail = table.Column<string>(type: "character varying(180)", maxLength: 180, nullable: false),
-                    TimeZone = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
-                    Theme = table.Column<string>(type: "character varying(40)", maxLength: 40, nullable: false),
-                    AllowedDomains = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    Slug = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false),
+                    BillingEmail = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: false),
+                    SupportEmail = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: false),
+                    TimeZone = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false),
+                    Theme = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
+                    AllowedDomains = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -57,18 +57,18 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "AuditLogs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ActorUserId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Action = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    EntityType = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
-                    EntityId = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
-                    CorrelationId = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    MetadataJson = table.Column<string>(type: "text", nullable: false),
-                    OccurredAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ActorUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Action = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    EntityType = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false),
+                    EntityId = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false),
+                    CorrelationId = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    MetadataJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    OccurredAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -84,16 +84,16 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "Clients",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    Email = table.Column<string>(type: "character varying(180)", maxLength: 180, nullable: false),
-                    ContactName = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: false),
+                    ContactName = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -109,18 +109,18 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "TenantSubscriptions",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    PlanCode = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    QuotaState = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    RenewedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    NextRenewalAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    LastQuotaCheckAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    WarningMessage = table.Column<string>(type: "character varying(240)", maxLength: 240, nullable: true),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PlanCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    QuotaState = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    RenewedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    NextRenewalAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LastQuotaCheckAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    WarningMessage = table.Column<string>(type: "nvarchar(240)", maxLength: 240, nullable: true),
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -136,16 +136,16 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "TenantUsageSnapshots",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CapturedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    ActiveUsers = table.Column<int>(type: "integer", nullable: false),
-                    ProjectsCount = table.Column<int>(type: "integer", nullable: false),
-                    TasksCount = table.Column<int>(type: "integer", nullable: false),
-                    ClientsCount = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CapturedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    ActiveUsers = table.Column<int>(type: "int", nullable: false),
+                    ProjectsCount = table.Column<int>(type: "int", nullable: false),
+                    TasksCount = table.Column<int>(type: "int", nullable: false),
+                    ClientsCount = table.Column<int>(type: "int", nullable: false),
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -161,18 +161,18 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Email = table.Column<string>(type: "character varying(180)", maxLength: 180, nullable: false),
-                    FullName = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    PasswordHash = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    Role = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    InvitationPending = table.Column<bool>(type: "boolean", nullable: false),
-                    LastLoginAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    InvitationPending = table.Column<bool>(type: "bit", nullable: false),
+                    LastLoginAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -188,19 +188,19 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "Projects",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ClientId = table.Column<Guid>(type: "uuid", nullable: true),
-                    OwnerUserId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    Code = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Description = table.Column<string>(type: "character varying(600)", maxLength: 600, nullable: false),
-                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClientId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    OwnerUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(600)", maxLength: 600, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     StartDate = table.Column<DateOnly>(type: "date", nullable: true),
                     DueDate = table.Column<DateOnly>(type: "date", nullable: true),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -228,19 +228,19 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "RefreshTokens",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TokenHash = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    ReplacedByTokenHash = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    ExpiresAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    LastUsedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    RevokedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
-                    CreatedByIp = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    UserAgent = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TokenHash = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    ReplacedByTokenHash = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
+                    ExpiresAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LastUsedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RevokedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    CreatedByIp = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    UserAgent = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -262,18 +262,18 @@ namespace TenantCore.Infrastructure.Database.Migrations
                 name: "Tasks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "uuid", nullable: false),
-                    AssigneeUserId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Title = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    Description = table.Column<string>(type: "character varying(600)", maxLength: 600, nullable: false),
-                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Priority = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AssigneeUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Title = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(600)", maxLength: 600, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Priority = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     DueDate = table.Column<DateOnly>(type: "date", nullable: true),
-                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uuid", nullable: false)
+                    CreatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
