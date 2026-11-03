@@ -55,7 +55,7 @@ Demo password for all seeded accounts: `Passw0rd!`
 
 ### Tenant isolation (critical)
 
-Every authenticated request must carry `X-Tenant-Id`. `TenantResolutionMiddleware` validates the header and ensures it matches the `tenantId` JWT claim — mismatches return 403 `tenant_mismatch`. EF Core global query filters on all tenant-owned entities enforce the boundary at the data layer. `IgnoreQueryFilters()` is reserved exclusively for the three Quartz background jobs that operate cross-tenant.
+Every authenticated request must carry `X-Tenant-Id`. `TenantResolutionMiddleware` validates the header and ensures it matches the `tenantId` JWT claim — mismatches return 403 `tenant_mismatch`. Para usuário autenticado, `HttpCurrentSession` lê o tenant só do claim (o header nunca o sobrescreve). Query filters globais do EF protegem a leitura em todas as entidades tenant-owned; `TenantCoreDbContext.SaveChanges` carimba/valida `TenantId` e o mantém imutável na escrita. Ids recebidos no corpo que referenciam outras entidades precisam ser validados por consultas filtradas (404 quando são de outro tenant). `IgnoreQueryFilters()` is reserved exclusively for the three Quartz background jobs that operate cross-tenant.
 
 ### Authorization policies
 
@@ -102,7 +102,7 @@ The frontend reads tenant identity from the authenticated session and never inde
 - `TenantCore.UnitTests` — covers JWT service, plan limit logic, role guards, query filter isolation
 - `TenantCore.IntegrationTests` — end-to-end API tests covering auth flows, tenant isolation enforcement, workspace boundaries, plan limits, and audit writes
 
-Integration tests use a real SQL Server test database. Test factory is in `tests/TenantCore.IntegrationTests/Testing/`.
+A maior parte dos testes de integração sobe a API em processo com o provider EF Core InMemory (factory em `tests/TenantCore.IntegrationTests/Testing/`). A suíte `tests/TenantCore.IntegrationTests/SqlServer/` (`Category=SqlServer`) sobe um SQL Server 2022 real via Testcontainers e exige Docker.
 
 ### Frontend
 
@@ -118,9 +118,10 @@ Consulte estes arquivos antes de fazer mudanças na área correspondente:
 | `docs/tenant-isolation.md` | Pontos de enforcement (middleware, ICurrentSession, query filters), índices, failure modes, cobertura de testes | Antes de qualquer mudança em entidades tenant-owned, `IgnoreQueryFilters()` ou middleware |
 | `docs/security.md` | Auth lifecycle (JWT + refresh token), policies RBAC, rate limiting, security headers, CORS, auditabilidade, checklist de produção | Antes de implementar ou alterar qualquer fluxo de autenticação/autorização |
 | `docs/runbook.md` | Startup local e Docker, demo flow para recrutadores, comandos úteis (migrations, build, test), incidents comuns, reset de ambiente | Para rodar o projeto, demo, troubleshooting ou reset |
-| `docs/adr-001-multi-tenancy.md` | Decisão: shared-database com header + claim enforcement; alternativas rejeitadas | Antes de propor mudança no modelo de tenancy |
-| `docs/adr-002-caching.md` | Decisão: Redis para `usage:{id}` e `subscription:{id}`; invalidação em writes e jobs | Antes de adicionar ou alterar estratégias de cache |
-| `docs/adr-003-background-jobs.md` | Decisão: Quartz.NET in-process; alternativas rejeitadas | Antes de adicionar ou refatorar jobs |
+| `docs/adr/0001-multi-tenancy-banco-compartilhado.md` | Decisão: shared-database com header + claim enforcement; alternativas rejeitadas | Antes de propor mudança no modelo de tenancy |
+| `docs/adr/0002-cache-redis-por-tenant.md` | Decisão: Redis para `usage:{id}` e `subscription:{id}`; invalidação em writes e jobs | Antes de adicionar ou alterar estratégias de cache |
+| `docs/adr/0003-jobs-quartz-in-process.md` | Decisão: Quartz.NET in-process; alternativas rejeitadas | Antes de adicionar ou refatorar jobs |
+| `docs/adr/0004-barreira-de-escrita-e-tenant-pelo-claim.md` | Decisão: tenant pelo claim do JWT e barreira de escrita no SaveChanges | Antes de mexer em `HttpCurrentSession`, `SaveChanges` ou handlers que recebem ids |
 
 ## Agentes disponíveis (Claude Code)
 

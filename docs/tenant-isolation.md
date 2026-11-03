@@ -1,108 +1,77 @@
-# Tenant Isolation
+# Isolamento entre tenants
 
-## Isolation model
+Modelo: banco SQL Server compartilhado, isolamento aplicado pela aplicação
+(ver [ADR 0001](adr/0001-multi-tenancy-banco-compartilhado.md) e
+[ADR 0004](adr/0004-barreira-de-escrita-e-tenant-pelo-claim.md)).
 
-`tenant_core` uses a shared database, application-enforced multi-tenancy model.
+## Como o tenant é resolvido
 
-The active tenant is resolved from:
+| Requisição | Fonte do tenant | Papel do header `X-Tenant-Id` |
+| --- | --- | --- |
+| Autenticada (JWT válido) | claim `tenantId` do JWT | obrigatório e precisa ser igual ao claim; senão `403 tenant_mismatch` |
+| Anônima (`/api/auth/login`, `/api/auth/refresh`) | header validado pelo middleware (`HttpContext.Items`) | escolhe o tenant onde as credenciais / o refresh token são procurados |
+| Sem `HttpContext` (jobs Quartz, seed) | nenhum (`null`) | — |
 
-- `X-Tenant-Id` request header
-- `tenantId` claim inside the authenticated JWT
+Não há resolução por subdomínio. O header nunca sobrescreve o claim: `HttpCurrentSession`
+ignora `Items` quando o usuário está autenticado.
 
-Both must agree for authenticated requests.
+## Pontos de aplicação
 
-## Enforcement points
+1. `TenantResolutionMiddleware` (depois de `UseAuthentication`): exige GUID válido em
+   `X-Tenant-Id` (`400 tenant_header_required`) e compara com o claim (`403 tenant_mismatch`).
+   Rotas excluídas: `/health`, `/swagger`, `/openapi`, `/favicon` e `OPTIONS`.
+2. `ICurrentSession`: handlers só obtêm tenant por `GetRequiredTenantId()`, nunca por `HttpContext`.
+3. Query filters do EF (`CurrentTenantId != Guid.Empty && x.TenantId == CurrentTenantId`) em
+   `User`, `RefreshToken`, `TenantSubscription`, `TenantUsageSnapshot`, `Client`, `Project`,
+   `WorkTask` e `AuditLog`. Sem tenant, os filtros retornam vazio (fail-closed). Um teste
+   unitário falha se surgir entidade `ITenantOwnedEntity` sem filtro.
+4. Barreira de escrita no `SaveChanges`: carimba `TenantId` vazio, rejeita escrita em outro tenant
+   e torna `TenantId` imutável (`TenantIsolationViolationException`).
+5. Referências recebidas no corpo (`ProjectId`, `ClientId`, `OwnerUserId`, `AssigneeUserId`) são
+   validadas por consultas filtradas e respondem 404 quando são de outro tenant.
+6. Recurso por id de outro tenant responde 404 (mesma resposta de id inexistente), nunca 403/200.
+7. SQL bruto (`TenantDashboardRepository`, Dapper) não passa pelos filtros: cada tabela é filtrada
+   por `@TenantId` no próprio SQL, inclusive nos `JOIN`s.
+8. Cache: chaves `usage:{tenantId}` e `subscription:{tenantId}`.
 
-### 1. Request middleware
+## `IgnoreQueryFilters()`
 
-`TenantResolutionMiddleware` is the first hard tenant boundary.
+Usado apenas em `UsageSnapshotJob`, `SubscriptionEnforcementJob` e `CleanupJob`, que filtram
+`TenantId` explicitamente e não devolvem dados a usuários. Qualquer uso novo exige revisão de
+segurança.
 
-It:
+## Índices por tenant
 
-- requires a valid `X-Tenant-Id` header on almost every request
-- stores the tenant in the current request context
-- compares the header against the authenticated user's `tenantId` claim
-- returns a ProblemDetails error on missing or mismatched tenant values
+- `Users(TenantId, Email)` único; `Projects(TenantId, Code)` único;
+  `TenantSubscriptions(TenantId)` único.
+- `Tasks(TenantId, ProjectId, Status)`, `Tasks(TenantId, AssigneeUserId)`,
+  `AuditLogs(TenantId, OccurredAtUtc)`, `RefreshTokens(TenantId, UserId, ExpiresAtUtc)`.
 
-Health and Swagger routes are excluded so tooling remains usable.
+## Respostas de erro
 
-### 2. Current session abstraction
+| Situação | Status | `type` |
+| --- | --- | --- |
+| Header ausente ou inválido | 400 | `tenant_header_required` |
+| Header diferente do claim, ou JWT sem claim de tenant | 403 | `tenant_mismatch` |
+| Id de outro tenant (projeto, tarefa, cliente, usuário) | 404 | `*_not_found` |
+| Login com e-mail de outro tenant | 401 | `invalid_credentials` |
+| Refresh token de outro tenant | 401 | `invalid_refresh_token` |
 
-Application handlers read tenant context through `ICurrentSession`. This keeps tenant access explicit in use cases and avoids hidden ambient dependencies inside handlers.
+## Testes
 
-### 3. EF Core global query filters
+- `TenantCore.UnitTests`: `TenantIsolationQueryFilterTests`, `TenantWriteGuardTests`,
+  `HttpCurrentSessionTests`, `TenantResolutionMiddlewareTests`.
+- `TenantCore.IntegrationTests/CrossTenantAccessTests` (API em memória, EF InMemory): tenant A
+  não lê, altera nem apaga dados do tenant B; header forjado não troca tenant; `tenantId` no corpo
+  é ignorado; cache separado por tenant.
+- `TenantCore.IntegrationTests/SqlServer` (Testcontainers, SQL Server 2022 real, migrations
+  aplicadas): dashboard Dapper, filtros traduzidos para T-SQL, barreira de escrita, índices únicos
+  por tenant e `UsageSnapshotJob`.
 
-Tenant-owned entities apply `HasQueryFilter(x => CurrentTenantId != Guid.Empty && x.TenantId == CurrentTenantId)`.
+## Limitações conhecidas
 
-This covers:
-
-- `User`
-- `RefreshToken`
-- `TenantSubscription`
-- `TenantUsageSnapshot`
-- `Client`
-- `Project`
-- `WorkTask`
-- `AuditLog`
-
-Result: routine queries cannot accidentally cross tenant boundaries unless a developer explicitly opts out with `IgnoreQueryFilters()`.
-
-### 4. Explicit cross-tenant code is limited
-
-`IgnoreQueryFilters()` is only used in operational jobs and internal aggregation scenarios, such as:
-
-- usage snapshot generation
-- subscription enforcement
-- cleanup of expired records
-
-These code paths enumerate tenants intentionally and never return cross-tenant data to end users.
-
-## Data model support
-
-Every tenant-owned row includes `TenantId`, and the database model adds tenant-oriented indexes such as:
-
-- `Users(TenantId, Email)` unique
-- `Projects(TenantId, Code)` unique
-- `Tasks(TenantId, ProjectId, Status)`
-- `AuditLogs(TenantId, OccurredAtUtc)`
-
-This improves both safety and query selectivity.
-
-## Failure modes
-
-### Missing tenant header
-
-Returns:
-
-- status `400`
-- code `tenant_header_required`
-
-### Header and JWT claim mismatch
-
-Returns:
-
-- status `403`
-- code `tenant_mismatch`
-
-### Missing tenant subscription
-
-Returns:
-
-- status `404`
-- code `subscription_missing`
-
-## Test coverage
-
-Isolation is covered by:
-
-- unit tests around query filter behavior
-- integration tests proving tenant mismatch rejection
-- integration tests proving one tenant cannot access another tenant's workspace data
-- integration tests proving plan rules are evaluated against the current tenant only
-
-## Operational guidance
-
-- Never trust frontend tenant values without the backend middleware check.
-- Keep tenant-aware indexes aligned with access patterns.
-- Treat any new `IgnoreQueryFilters()` usage as a security review item.
-- If cross-tenant administration is ever introduced, build it as a separate privileged path instead of weakening the default tenant model.
+- A barreira de escrita não detecta FK cruzado (id de outro tenant numa entidade do tenant
+  correto); isso depende da validação nos handlers.
+- O FK `Tasks.ProjectId` tem `ON DELETE CASCADE` sem incluir `TenantId`: dados inconsistentes
+  gravados antes desta correção ainda seriam apagados em cascata pelo outro tenant.
+- Não há Row-Level Security no SQL Server: o isolamento é só da aplicação.
