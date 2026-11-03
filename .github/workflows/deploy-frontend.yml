@@ -1,19 +1,14 @@
 name: deploy-frontend
 
 # Deploys the React/Vite SPA to Azure Static Web Apps (free tier).
-# Runs only on pushes to master that touch frontend code.
+# Runs only when triggered manually (workflow_dispatch).
 # The Azure Static Web Apps action handles both build and deploy atomically,
 # so there is no separate Docker step — the action builds the Vite project
 # server-side using the Node version pinned below.
 
+# Somente manual: o deploy para Azure (infra paga) não dispara mais em push.
+# Proposta de hospedagem gratuita: README, seção "Deploy gratuito (proposta)", e docs/adr/0005.
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - "frontend/**"
-      - ".github/workflows/deploy-frontend.yml"
-  # Allow manual deploys from the GitHub Actions UI (useful for hotfixes).
   workflow_dispatch:
 
 # Only one deploy runs at a time per branch.
