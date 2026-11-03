@@ -200,10 +200,12 @@ try
     // which may fall outside RFC-1918 ranges (e.g. 100.64.0.0/10 shared address space).
     // The outer security perimeter is Azure's responsibility; spoofing is not possible
     // from the internet since clients cannot reach the container directly.
+    // ForwardedHeaders:ForwardLimit = número de proxies confiáveis na frente da API (padrão 1).
+    // Ex.: SPA no Netlify fazendo proxy de /api para o Render = 2 saltos (Netlify + balanceador do Render).
     var forwardedOptions = new ForwardedHeadersOptions
     {
         ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-        ForwardLimit = 1,
+        ForwardLimit = Math.Max(1, builder.Configuration.GetValue("ForwardedHeaders:ForwardLimit", 1)),
     };
     forwardedOptions.KnownNetworks.Clear();
     forwardedOptions.KnownProxies.Clear();
