@@ -80,12 +80,48 @@ api.interceptors.response.use(
   },
 )
 
-export function problemMessage(error: unknown) {
-  if (axios.isAxiosError<ProblemDetailsPayload>(error)) {
-    return error.response?.data?.detail ?? error.response?.data?.title ?? 'Request failed.'
+/**
+ * Restaura o access token depois de um reload: a sessão (sem token) vem do localStorage
+ * e o token é obtido de novo pelo cookie HttpOnly de refresh. Se o refresh falhar a
+ * sessão é descartada e o usuário volta para o login.
+ */
+export async function restoreSession(): Promise<boolean> {
+  const session = sessionStore.getSnapshot()
+  if (!session) {
+    return false
+  }
+  if (session.accessToken) {
+    return true
   }
 
-  return 'Unexpected error.'
+  refreshRequest ??= refreshSession(session.user.tenantId).finally(() => {
+    refreshRequest = null
+  })
+
+  try {
+    await refreshRequest
+    return true
+  } catch {
+    sessionStore.clear()
+    return false
+  }
+}
+
+export const API_UNREACHABLE_MESSAGE =
+  'Não foi possível falar com a API. Na demo gratuita o servidor hiberna quando fica ocioso: aguarde cerca de 1 minuto e tente de novo.'
+
+export function problemMessage(error: unknown) {
+  if (axios.isAxiosError<ProblemDetailsPayload>(error)) {
+    if (!error.response) {
+      return API_UNREACHABLE_MESSAGE
+    }
+    if (error.response.status === 429) {
+      return 'Muitas tentativas em pouco tempo. Aguarde um minuto e tente de novo.'
+    }
+    return error.response.data?.detail ?? error.response.data?.title ?? `A requisição falhou (HTTP ${error.response.status}).`
+  }
+
+  return 'Erro inesperado.'
 }
 
 export async function loginRequest(email: string, password: string, tenantId: string) {
