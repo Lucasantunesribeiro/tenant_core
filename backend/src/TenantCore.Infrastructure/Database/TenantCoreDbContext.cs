@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TenantCore.Application.Common.Abstractions;
+using TenantCore.Domain.Common;
 using TenantCore.Domain.Entities;
 using TenantCore.Domain.Enums;
 
@@ -30,6 +31,93 @@ public sealed class TenantCoreDbContext(
     public DbSet<Client> Clients => Set<Client>();
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        EnforceTenantOwnership();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        EnforceTenantOwnership();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <summary>
+    /// Barreira de escrita multi-tenant (complementa os query filters, que só protegem leitura):
+    /// - Added: TenantId vazio é carimbado com o tenant da sessão; TenantId de outro tenant é rejeitado.
+    /// - Modified: TenantId de entidade existente é imutável; só se altera linha do tenant da sessão.
+    /// - Deleted: só se apaga linha do tenant da sessão.
+    /// Sem tenant na sessão (jobs Quartz, seed de startup) as checagens de "mesmo tenant" não se
+    /// aplicam, pois esses fluxos operam entre tenants de propósito; a imutabilidade do TenantId
+    /// e a proibição de TenantId vazio continuam valendo.
+    /// </summary>
+    private void EnforceTenantOwnership()
+    {
+        var sessionTenantId = currentSession.TenantId;
+
+        foreach (var entry in ChangeTracker.Entries<ITenantOwnedEntity>())
+        {
+            var tenantProperty = entry.Property(nameof(ITenantOwnedEntity.TenantId));
+            var entityName = entry.Metadata.ClrType.Name;
+
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                {
+                    var tenantId = (Guid)tenantProperty.CurrentValue!;
+                    if (tenantId == Guid.Empty)
+                    {
+                        if (sessionTenantId is null)
+                        {
+                            throw new TenantIsolationViolationException(
+                                $"{entityName} cannot be created without a TenantId outside a tenant context.");
+                        }
+
+                        tenantProperty.CurrentValue = sessionTenantId.Value;
+                    }
+                    else if (sessionTenantId is not null && tenantId != sessionTenantId.Value)
+                    {
+                        throw new TenantIsolationViolationException(
+                            $"{entityName} cannot be created for a tenant other than the current session tenant.");
+                    }
+
+                    break;
+                }
+
+                case EntityState.Modified:
+                {
+                    var originalTenantId = (Guid)tenantProperty.OriginalValue!;
+                    var currentTenantId = (Guid)tenantProperty.CurrentValue!;
+                    if (tenantProperty.IsModified || originalTenantId != currentTenantId)
+                    {
+                        throw new TenantIsolationViolationException($"{entityName}.TenantId is immutable.");
+                    }
+
+                    if (sessionTenantId is not null && originalTenantId != sessionTenantId.Value)
+                    {
+                        throw new TenantIsolationViolationException(
+                            $"{entityName} belongs to another tenant and cannot be modified.");
+                    }
+
+                    break;
+                }
+
+                case EntityState.Deleted:
+                {
+                    var originalTenantId = (Guid)tenantProperty.OriginalValue!;
+                    if (sessionTenantId is not null && originalTenantId != sessionTenantId.Value)
+                    {
+                        throw new TenantIsolationViolationException(
+                            $"{entityName} belongs to another tenant and cannot be deleted.");
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

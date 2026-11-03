@@ -41,6 +41,26 @@ internal sealed class UpdateTaskCommandHandler(
         var task = await dbContext.Tasks.SingleOrDefaultAsync(x => x.Id == request.TaskId, cancellationToken)
             ?? throw new AppException("task_not_found", "Task not found", 404, "The requested task does not exist.");
 
+        // ProjectId/AssigneeUserId vêm do corpo da requisição: validar via query filter de tenant
+        // impede vincular a tarefa a projeto/usuário de outro tenant (o FK aceitaria o id).
+        if (request.ProjectId != task.ProjectId)
+        {
+            var projectExists = await dbContext.Projects.AnyAsync(x => x.Id == request.ProjectId, cancellationToken);
+            if (!projectExists)
+            {
+                throw new AppException("project_not_found", "Project not found", 404, "The selected project does not exist.");
+            }
+        }
+
+        if (request.AssigneeUserId.HasValue)
+        {
+            var assigneeExists = await dbContext.Users.AnyAsync(x => x.Id == request.AssigneeUserId.Value, cancellationToken);
+            if (!assigneeExists)
+            {
+                throw new AppException("assignee_not_found", "Assignee not found", 404, "The selected assignee does not exist.");
+            }
+        }
+
         task.Update(
             request.ProjectId,
             request.AssigneeUserId,

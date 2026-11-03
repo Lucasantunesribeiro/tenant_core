@@ -1,215 +1,176 @@
 # tenant_core
 
-`tenant_core` is a production-shaped multi-tenant B2B SaaS built to showcase market-relevant .NET and React engineering skills. It demonstrates tenant isolation, RBAC, plan enforcement, refresh token rotation, background jobs, Redis caching, structured observability, Dockerized local infrastructure, and CI workflows in a single coherent monorepo.
+SaaS B2B multi-tenant (monorepo) com API .NET 9 e painel React. Vários tenants (empresas)
+compartilham o mesmo backend e o mesmo banco SQL Server; cada tenant tem seus usuários,
+projetos, tarefas, clientes, assinatura/plano, snapshots de uso e trilha de auditoria.
+O isolamento entre tenants é aplicado pela aplicação (middleware, sessão, query filters do EF Core
+e barreira de escrita no `SaveChanges`). Detalhes em [docs/tenant-isolation.md](docs/tenant-isolation.md).
 
-This is intentionally not a toy CRUD sample. The platform models how an operations-focused workspace SaaS behaves when multiple companies share the same backend safely and each company needs its own users, projects, tasks, clients, subscription state, usage tracking, and audit trail.
+## O que o código faz
 
-## Live demo
+- Autenticação JWT (`sub`, `email`, `role`, `tenantId`, `jti`) com refresh token em cookie
+  `HttpOnly`, armazenado como hash SHA-256, rotacionado no refresh e revogado no logout.
+- RBAC com três papéis (`Admin`, `Manager`, `User`) e policies `TenantMember`, `ManagerOrAdmin`,
+  `AdminOnly`.
+- CRUD de projetos, tarefas e clientes; gestão de usuários e papéis; configurações do tenant.
+- Limites por plano (`Free`, `Pro`, `Business`) aplicados no backend (`IPlanLimitService`).
+- Auditoria das mutações sensíveis (`IAuditService`) e consulta paginada dos logs.
+- Dashboard de projetos via Dapper (SQL bruto filtrado por `TenantId`).
+- Cache Redis de resumos por tenant (`usage:{tenantId}`, `subscription:{tenantId}`).
+- Jobs Quartz.NET in-process: snapshot de uso, estado de cota e limpeza.
+- Observabilidade: Serilog (JSON), OpenTelemetry (traces/métricas via OTLP), correlation id,
+  health checks `/health/live` e `/health/ready`.
+- Rate limiting: 5 req/min por IP em `/api/auth/*`; 120 req/min por usuário no resto da API.
 
-The application is fully deployed on Azure. No setup required — open and explore.
+## Arquitetura
 
-| Component | URL |
-| --- | --- |
-| **Frontend** | https://purple-dune-018763b0f.4.azurestaticapps.net |
-| **API (health live)** | https://tenant-core-api.azurewebsites.net/health/live |
-| **API (health ready)** | https://tenant-core-api.azurewebsites.net/health/ready |
+```mermaid
+flowchart LR
+    subgraph Browser
+        SPA["React 18 + Vite<br/>(Axios envia Bearer + X-Tenant-Id)"]
+    end
 
-### Demo credentials
+    subgraph API["TenantCore.Api (.NET 9)"]
+        direction TB
+        MW["GlobalException → CorrelationId → Serilog → SecurityHeaders<br/>→ CORS → Authentication → TenantResolution → RateLimiter → Authorization"]
+        CTRL["Controllers"]
+        APP["Application<br/>MediatR handlers + FluentValidation<br/>ICurrentSession · IPlanLimitService · IAuditService"]
+        INF["Infrastructure<br/>TenantCoreDbContext (query filters + barreira de escrita)<br/>TenantDashboardRepository (Dapper)<br/>DistributedCacheService · JwtTokenService"]
+        JOBS["Quartz.NET<br/>UsageSnapshot · SubscriptionEnforcement · Cleanup"]
+        MW --> CTRL --> APP --> INF
+        JOBS --> INF
+    end
 
-Password for all accounts: `Passw0rd!`
+    SQL[("SQL Server<br/>banco compartilhado, TenantId por linha")]
+    REDIS[("Redis")]
+    OTEL["OTel Collector"] --> JAEGER["Jaeger"]
 
-| Tenant | Tenant ID | Email | Role |
-| --- | --- | --- | --- |
-| Acme Operations | `11111111-1111-1111-1111-111111111111` | `admin@acme.test` | Admin |
-| Acme Operations | `11111111-1111-1111-1111-111111111111` | `manager@acme.test` | Manager |
-| Acme Operations | `11111111-1111-1111-1111-111111111111` | `user@acme.test` | User |
-| Globex Advisory | `22222222-2222-2222-2222-222222222222` | `admin@globex.test` | Admin |
-
-### Infrastructure
-
-| Service | Provider |
-| --- | --- |
-| Backend API | Azure App Service B1 Linux (container) |
-| Frontend | Azure Static Web Apps |
-| Database | Neon PostgreSQL (serverless) |
-| Cache | Upstash Redis |
-| Container registry | GitHub Container Registry (ghcr.io) |
-| CI/CD | GitHub Actions |
-
-## What it demonstrates
-
-- .NET 9 Web API with Controllers, MediatR, FluentValidation, ProblemDetails, Swagger, Quartz.NET, Serilog, OpenTelemetry, EF Core, SQL Server, Redis, JWT, and refresh token rotation
-- React 18 + Vite + TypeScript admin dashboard with TanStack Query, React Router, role-aware routes, typed API access, protected flows, and enterprise-style UX
-- Shared-database multi-tenancy enforced through `X-Tenant-Id`, JWT tenant claims, EF Core query filters, and integration tests
-- Plan-based SaaS restrictions with `Free`, `Pro`, and `Business` limits enforced in application rules
-- Auditability and operational visibility through audit logs, health endpoints, correlation IDs, OTEL traces, and structured logs
-
-## Product scope
-
-Each tenant workspace can:
-
-- manage users and roles
-- manage projects, tasks, and clients
-- review billing plan and usage
-- trigger simulated plan changes
-- inspect audit logs
-- update tenant settings
-
-## Tech stack
-
-### Backend
-
-- .NET 9
-- ASP.NET Core Web API
-- MediatR
-- FluentValidation
-- EF Core + SQL Server
-- Redis
-- Quartz.NET
-- Serilog
-- OpenTelemetry
-- JWT + rotating refresh tokens
-
-### Frontend
-
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS
-- TanStack Query
-- React Router
-- Axios
-
-### DevOps
-
-- Docker Compose
-- SQL Server container
-- Redis container
-- OpenTelemetry Collector
-- Jaeger
-- GitHub Actions
-
-## Repository tree
-
-```text
-tenant_core/
-├─ backend/
-│  ├─ Dockerfile
-│  ├─ tenant_core.sln
-│  ├─ src/
-│  │  ├─ TenantCore.Api/
-│  │  ├─ TenantCore.Application/
-│  │  ├─ TenantCore.Domain/
-│  │  └─ TenantCore.Infrastructure/
-│  └─ tests/
-│     ├─ TenantCore.UnitTests/
-│     └─ TenantCore.IntegrationTests/
-├─ frontend/
-│  ├─ Dockerfile
-│  ├─ nginx.conf
-│  └─ src/
-├─ docs/
-│  ├─ architecture.md
-│  ├─ tenant-isolation.md
-│  ├─ security.md
-│  ├─ runbook.md
-│  └─ adr-00x-*.md
-├─ infra/
-│  └─ otel/
-├─ docker-compose.yml
-└─ .github/workflows/
+    SPA -->|HTTP JSON| MW
+    INF --> SQL
+    INF --> REDIS
+    API -->|OTLP HTTP| OTEL
 ```
 
-## Seeded demo access
+Camadas do backend (`backend/src`): `TenantCore.Domain` (entidades, enums, `TenantOwnedEntity`),
+`TenantCore.Application` (CQRS com MediatR), `TenantCore.Infrastructure` (EF Core, Dapper, Redis,
+Quartz, JWT, migrations, seed) e `TenantCore.Api` (controllers, middlewares, `Program.cs`).
 
-All seeded demo accounts use password `Passw0rd!`.
+## Como rodar
 
-| Tenant | Tenant ID | Accounts |
-| --- | --- | --- |
-| Acme Operations | `11111111-1111-1111-1111-111111111111` | `admin@acme.test`, `manager@acme.test`, `user@acme.test` |
-| Globex Advisory | `22222222-2222-2222-2222-222222222222` | `admin@globex.test` |
+### Docker Compose (stack completa)
 
-## Local run
+```bash
+cp .env.example .env        # opcional: o compose tem valores padrão de desenvolvimento
+docker compose up --build -d
+```
 
-### Option A: Docker Compose
-
-1. Copy `.env.example` to `.env` if you want to override defaults.
-2. Run `docker compose up --build -d`.
-3. Open:
-   - Frontend: `http://localhost:5173`
-   - API Swagger: `http://localhost:5000/swagger`
-   - API readiness: `http://localhost:5000/health/ready`
-   - Jaeger: `http://localhost:16686`
-
-### Option B: Manual development
-
-1. Start SQL Server and Redis locally.
-2. Run the API from `backend`:
-   - `dotnet restore tenant_core.sln`
-   - `dotnet run --project src/TenantCore.Api`
-3. Run the frontend from `frontend`:
-   - `npm ci`
-   - `npm run dev`
-
-The frontend defaults to `http://localhost:5000` for the API through `VITE_API_URL`.
-
-## Quality gates
-
-### Backend
-
-- `dotnet build backend/tenant_core.sln -c Release`
-- `dotnet test backend/tenant_core.sln -c Release`
-
-### Frontend
-
-- `npm run lint`
-- `npm run build`
-- `npm test`
-
-### Full stack
-
-- `docker compose build`
-- `docker compose up -d`
-
-## Key implementation choices
-
-- Tenant resolution is mandatory for almost every request and enforced before business logic runs.
-- JWT access tokens carry `sub`, `email`, `role`, and `tenantId`.
-- Refresh tokens are stored as hashes, rotated on refresh, and revoked on logout.
-- Plan limits are enforced in application services, not only in the UI.
-- Redis caches subscription and usage dashboard responses and is invalidated on writes and scheduled recomputation.
-- Quartz jobs maintain usage snapshots, quota warning state, and cleanup tasks.
-
-## Deployment
-
-The application is live on Azure. The CI/CD pipeline builds, tests, and deploys automatically on every push to `master`.
-
-| Component | URL |
+| Serviço | URL |
 | --- | --- |
-| Frontend | https://purple-dune-018763b0f.4.azurestaticapps.net |
-| API | https://tenant-core-api.azurewebsites.net |
-| Health live | https://tenant-core-api.azurewebsites.net/health/live |
-| Health ready | https://tenant-core-api.azurewebsites.net/health/ready |
+| Frontend | http://localhost:5173 |
+| API / Swagger (ambiente Development) | http://localhost:5000/swagger |
+| Readiness | http://localhost:5000/health/ready |
+| Jaeger | http://localhost:16686 |
 
-Pipelines: `.github/workflows/deploy-backend.yml` and `.github/workflows/deploy-frontend.yml`.
+Na subida, a API aplica as migrations e semeia dados de demonstração.
 
-## Documentation map
+### Local (sem compose para a API)
 
-- [Architecture](docs/architecture.md)
-- [Tenant isolation](docs/tenant-isolation.md)
-- [Security](docs/security.md)
+Pré-requisitos: .NET SDK 9, Node 22, SQL Server e Redis acessíveis (por exemplo,
+`docker compose up -d sqlserver redis`).
+
+```bash
+cd backend
+dotnet restore tenant_core.sln
+dotnet run --project src/TenantCore.Api      # usa appsettings.Development.json
+
+cd ../frontend
+npm ci
+npm run dev
+```
+
+### Contas de demonstração (seed)
+
+Senha de todas: `Passw0rd!`
+
+| Tenant | Tenant ID | Contas |
+| --- | --- | --- |
+| Acme Operations | `11111111-1111-1111-1111-111111111111` | `admin@acme.test` (Admin), `manager@acme.test` (Manager), `user@acme.test` (User) |
+| Globex Advisory | `22222222-2222-2222-2222-222222222222` | `admin@globex.test` (Admin) |
+
+## Variáveis de ambiente
+
+Configuração .NET usa `__` como separador de seção (`Jwt__SigningKey` = `Jwt:SigningKey`).
+
+| Variável | Onde | Obrigatória | Descrição |
+| --- | --- | --- | --- |
+| `ConnectionStrings__SqlServer` | API | sim | Connection string do SQL Server. |
+| `ConnectionStrings__Redis` | API | sim | Endpoint do Redis (`host:porta`). |
+| `Jwt__SigningKey` | API | sim | Chave HMAC do JWT, mínimo 32 caracteres (a API não sobe sem ela). |
+| `Jwt__Issuer` / `Jwt__Audience` | API | não | Padrão `tenant_core` / `tenant_core.web`. |
+| `Jwt__AccessTokenMinutes` / `Jwt__RefreshTokenDays` | API | não | Padrão 15 min / 14 dias. |
+| `Cors__AllowedOrigins__0` | API | não | Origem permitida (padrão `http://localhost:5173`). |
+| `OpenTelemetry__OtlpEndpoint` | API | não | Endpoint OTLP HTTP; vazio desliga a exportação. |
+| `Jobs__UsageSnapshotCron`, `Jobs__SubscriptionEnforcementCron`, `Jobs__CleanupCron` | API | não | Cron Quartz dos jobs. |
+| `ASPNETCORE_ENVIRONMENT` | API | não | `Development` habilita Swagger. |
+| `MSSQL_SA_PASSWORD` | compose | não | Senha do `sa` do container SQL Server (valor de desenvolvimento no `.env.example`). |
+| `JWT_SIGNING_KEY` | compose | não | Repassada para `Jwt__SigningKey` da API. |
+| `VITE_API_URL` | frontend (build) | não | URL base da API, sem barra final (padrão `http://localhost:5000`). |
+
+Os valores em `.env.example` e `appsettings*.json` são apenas para desenvolvimento local.
+Em qualquer ambiente exposto, defina senha e chave JWT próprias.
+
+## Como testar
+
+```bash
+cd backend
+dotnet test tenant_core.sln -c Release                                    # tudo
+dotnet test tenant_core.sln -c Release --filter "Category!=SqlServer"      # sem Docker
+dotnet test tenant_core.sln -c Release --filter "Category=SqlServer"       # só SQL Server real
+
+cd ../frontend
+npm run lint && npm test && npm run build
+```
+
+- `TenantCore.UnitTests`: JWT, limites de plano, guards de papel, paginação, middlewares,
+  `HttpCurrentSession`, query filters e barreira de escrita.
+- `TenantCore.IntegrationTests`: API em processo (EF InMemory) para fluxos de auth, isolamento
+  entre tenants (`CrossTenantAccessTests`), limites de plano e auditoria; e a suíte
+  `SqlServer/` com Testcontainers (SQL Server 2022 real, migrations aplicadas), que exige Docker.
+
+O CI (`.github/workflows/ci.yml`) roda build e todos os testes do backend e lint/testes/build do
+frontend em `pull_request` e em `push` para `master`.
+
+## Deploy
+
+`deploy-backend.yml` (imagem no GHCR + Azure App Service) e `deploy-frontend.yml`
+(Azure Static Web Apps) rodam apenas em `push` para `master` ou manualmente
+(`workflow_dispatch`), nunca em pull request. Dependem de secrets/vars configurados no
+repositório. O estado de um ambiente publicado não foi verificado nesta revisão.
+
+## Limitações e o que não está implementado
+
+- Isolamento só na aplicação: não há Row-Level Security no SQL Server.
+- A barreira de escrita não detecta FK cruzado (id de outro tenant numa entidade do tenant
+  correto); os handlers validam essas referências. O FK `Tasks.ProjectId` tem cascade delete.
+- Tenant é resolvido por header + claim; não há resolução por subdomínio.
+- Não há cadastro self-service de tenants nem troca de tenant para o mesmo usuário.
+- Mudança de plano é simulada (sem gateway de pagamento).
+- Jobs Quartz usam store em memória: com várias instâncias da API, cada uma executa os jobs.
+- A invalidação de cache acontece antes do `SaveChanges`; uma leitura concorrente pode
+  repopular um valor antigo até o TTL (2–5 min).
+- `ForwardedHeaders` confia em qualquer proxy (`KnownNetworks`/`KnownProxies` limpos), pensado
+  para Azure App Service; fora dele, o IP usado no rate limit de auth pode ser forjado via
+  `X-Forwarded-For`.
+- A maioria dos testes de integração usa EF InMemory, que não aplica FKs nem tradução T-SQL;
+  a suíte `SqlServer/` cobre os pontos de isolamento que dependem do banco real.
+
+## Documentação
+
+- [Arquitetura](docs/architecture.md)
+- [Isolamento entre tenants](docs/tenant-isolation.md)
+- [Segurança](docs/security.md)
 - [Runbook](docs/runbook.md)
-- [ADR 001: Multi-tenancy](docs/adr-001-multi-tenancy.md)
-- [ADR 002: Caching](docs/adr-002-caching.md)
-- [ADR 003: Background jobs](docs/adr-003-background-jobs.md)
-
-## Why this project is recruiter-relevant
-
-This repository is optimized to make enterprise backend capabilities obvious during review:
-
-- clear multi-tenant boundary enforcement
-- real auth lifecycle and RBAC
-- business rules beyond CRUD
-- test coverage around isolation and quota failures
-- operational maturity through health checks, logs, traces, caching, and jobs
-- a frontend that feels like an actual admin product instead of a disconnected demo screen
+- ADRs: [0001 multi-tenancy](docs/adr/0001-multi-tenancy-banco-compartilhado.md),
+  [0002 cache](docs/adr/0002-cache-redis-por-tenant.md),
+  [0003 jobs](docs/adr/0003-jobs-quartz-in-process.md),
+  [0004 barreira de escrita](docs/adr/0004-barreira-de-escrita-e-tenant-pelo-claim.md)

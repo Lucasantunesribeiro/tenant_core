@@ -22,18 +22,32 @@ public sealed class HttpCurrentSession(IHttpContextAccessor httpContextAccessor)
         }
     }
 
+    /// <summary>
+    /// Tenant da requisição atual.
+    /// Usuário autenticado: SEMPRE o claim <c>tenantId</c> do JWT assinado. O header
+    /// <c>X-Tenant-Id</c> nunca sobrescreve o claim, mesmo que o middleware de resolução
+    /// não tenha rodado (defesa em profundidade).
+    /// Requisição anônima (login/refresh): o valor validado pelo
+    /// <c>TenantResolutionMiddleware</c> em <c>HttpContext.Items</c>.
+    /// </summary>
     public Guid? TenantId
     {
         get
         {
-            var itemValue = HttpContext?.Items[HeaderNames.TenantId]?.ToString();
-            if (Guid.TryParse(itemValue, out var parsedFromItem))
+            var context = HttpContext;
+            if (context is null)
             {
-                return parsedFromItem;
+                return null;
             }
 
-            var claimValue = HttpContext?.User.FindFirstValue(ClaimNames.TenantId);
-            return Guid.TryParse(claimValue, out var parsedFromClaim) ? parsedFromClaim : null;
+            if (context.User.Identity?.IsAuthenticated == true)
+            {
+                var claimValue = context.User.FindFirstValue(ClaimNames.TenantId);
+                return Guid.TryParse(claimValue, out var parsedFromClaim) ? parsedFromClaim : null;
+            }
+
+            var itemValue = context.Items[HeaderNames.TenantId]?.ToString();
+            return Guid.TryParse(itemValue, out var parsedFromItem) ? parsedFromItem : null;
         }
     }
 
