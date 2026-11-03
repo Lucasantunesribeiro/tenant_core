@@ -28,6 +28,8 @@
   <ItemGroup>
     <ProjectReference Include="..\TenantCore.Application\TenantCore.Application.csproj" />
     <ProjectReference Include="..\TenantCore.Infrastructure\TenantCore.Infrastructure.csproj" />
+    <!-- Carregado por nome quando Database:Provider=PostgreSQL (MigrationsAssembly). -->
+    <ProjectReference Include="..\TenantCore.Infrastructure.Postgres\TenantCore.Infrastructure.Postgres.csproj" />
   </ItemGroup>
 
 </Project>

@@ -5,6 +5,7 @@ COPY src/TenantCore.Api/TenantCore.Api.csproj src/TenantCore.Api/
 COPY src/TenantCore.Application/TenantCore.Application.csproj src/TenantCore.Application/
 COPY src/TenantCore.Domain/TenantCore.Domain.csproj src/TenantCore.Domain/
 COPY src/TenantCore.Infrastructure/TenantCore.Infrastructure.csproj src/TenantCore.Infrastructure/
+COPY src/TenantCore.Infrastructure.Postgres/TenantCore.Infrastructure.Postgres.csproj src/TenantCore.Infrastructure.Postgres/
 
 RUN dotnet restore src/TenantCore.Api/TenantCore.Api.csproj
 

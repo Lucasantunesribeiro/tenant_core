@@ -28,17 +28,13 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<JobScheduleOptions>(configuration.GetSection(JobScheduleOptions.SectionName));
 
-        var sqlConnection = configuration.GetConnectionString("SqlServer")
-            ?? throw new InvalidOperationException("Connection string 'SqlServer' is missing.");
+        var databaseProvider = DatabaseProviderSettings.GetProvider(configuration);
+        var databaseConnection = DatabaseProviderSettings.GetConnectionString(configuration, databaseProvider);
         var redisConnection = configuration.GetConnectionString("Redis")
             ?? throw new InvalidOperationException("Connection string 'Redis' is missing.");
 
         services.AddDbContext<TenantCoreDbContext>(options =>
-            options.UseSqlServer(sqlConnection, sql =>
-            {
-                sql.MigrationsAssembly(typeof(TenantCoreDbContext).Assembly.FullName);
-                sql.EnableRetryOnFailure();
-            }));
+            options.UseConfiguredDatabase(databaseProvider, databaseConnection, enableRetryOnFailure: true));
 
         services.AddScoped<ITenantCoreDbContext>(sp => sp.GetRequiredService<TenantCoreDbContext>());
         services.AddScoped<ITenantDashboardRepository, TenantDashboardRepository>();
@@ -52,7 +48,7 @@ public static class DependencyInjection
         services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnection));
         services.AddHealthChecks()
-            .AddDbContextCheck<TenantCoreDbContext>("sqlserver", tags: new[] { "ready" })
+            .AddDbContextCheck<TenantCoreDbContext>("database", tags: new[] { "ready" })
             .AddCheck<RedisHealthCheck>("redis", tags: new[] { "ready" });
 
         services.AddQuartz(q =>

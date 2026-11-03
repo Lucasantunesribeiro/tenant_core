@@ -5,6 +5,7 @@ using TenantCore.Domain.Enums;
 
 namespace TenantCore.Infrastructure.Database;
 
+/// <summary>Factory de design-time das migrations de SQL Server (as de PostgreSQL ficam em TenantCore.Infrastructure.Postgres).</summary>
 public sealed class TenantCoreDbContextFactory : IDesignTimeDbContextFactory<TenantCoreDbContext>
 {
     public TenantCoreDbContext CreateDbContext(string[] args)

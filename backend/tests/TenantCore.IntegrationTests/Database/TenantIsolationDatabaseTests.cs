@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -13,11 +12,14 @@ using TenantCore.Infrastructure.Database.Repositories;
 using TenantCore.Infrastructure.Jobs;
 using TenantCore.IntegrationTests.Testing;
 
-namespace TenantCore.IntegrationTests.SqlServer;
+namespace TenantCore.IntegrationTests.Database;
 
-[Collection(SqlServerCollection.Name)]
-[Trait("Category", "SqlServer")]
-public sealed class SqlServerTenantIsolationTests(SqlServerFixture fixture)
+/// <summary>
+/// Suíte de isolamento contra banco real, executada uma vez por provider
+/// (<c>Category=SqlServer</c> e <c>Category=Postgres</c>).
+/// </summary>
+public abstract class TenantIsolationDatabaseTests<TFixture>(TFixture fixture)
+    where TFixture : DatabaseFixture
 {
     [Fact]
     public async Task DapperDashboard_ShouldOnlyReturnRowsOfRequestedTenant()
@@ -51,7 +53,7 @@ public sealed class SqlServerTenantIsolationTests(SqlServerFixture fixture)
     }
 
     [Fact]
-    public async Task EfQueryFilters_ShouldTranslateToTenantPredicateOnSqlServer()
+    public async Task EfQueryFilters_ShouldTranslateToTenantPredicate()
     {
         var a = await fixture.SeedTenantAsync("charlie", taskCount: 1);
         var b = await fixture.SeedTenantAsync("delta", taskCount: 4);
@@ -67,7 +69,7 @@ public sealed class SqlServerTenantIsolationTests(SqlServerFixture fixture)
     }
 
     [Fact]
-    public async Task WriteGuard_ShouldBlockCrossTenantUpdateAndDeleteOnSqlServer()
+    public async Task WriteGuard_ShouldBlockCrossTenantUpdateAndDelete()
     {
         var a = await fixture.SeedTenantAsync("echo");
         var b = await fixture.SeedTenantAsync("foxtrot");
@@ -106,7 +108,30 @@ public sealed class SqlServerTenantIsolationTests(SqlServerFixture fixture)
         contextA.Projects.Add(new Project(a.TenantId, null, null, "Duplicate", "SHARED", string.Empty, ProjectStatus.Planned, null, null));
 
         var act = () => contextA.SaveChangesAsync();
-        (await act.Should().ThrowAsync<DbUpdateException>()).WithInnerException<SqlException>();
+        var thrown = await act.Should().ThrowAsync<DbUpdateException>();
+        fixture.IsUniqueViolation(thrown.Which).Should().BeTrue("o índice único (TenantId, Code) deve barrar o duplicado");
+    }
+
+    [Fact]
+    public async Task ConcurrentUpdates_ShouldRaiseConcurrencyConflict()
+    {
+        // SQL Server: rowversion; PostgreSQL: coluna de sistema xmin.
+        var a = await fixture.SeedTenantAsync("kilo");
+
+        await using var first = fixture.CreateDbContext(a.TenantId);
+        await using var second = fixture.CreateDbContext(a.TenantId);
+        var clientFirst = await first.Clients.SingleAsync(x => x.Id == a.ClientId);
+        var clientSecond = await second.Clients.SingleAsync(x => x.Id == a.ClientId);
+
+        clientFirst.Update("First writer", "first@kilo.test", "First", ClientStatus.Active, string.Empty, DateTimeOffset.UtcNow);
+        await first.SaveChangesAsync();
+
+        clientSecond.Update("Second writer", "second@kilo.test", "Second", ClientStatus.Active, string.Empty, DateTimeOffset.UtcNow);
+        var act = () => second.SaveChangesAsync();
+        await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
+
+        await using var reader = fixture.CreateDbContext(a.TenantId);
+        (await reader.Clients.SingleAsync(x => x.Id == a.ClientId)).Name.Should().Be("First writer");
     }
 
     [Fact]

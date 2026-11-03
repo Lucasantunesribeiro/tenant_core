@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TenantCore.Application.Common.Abstractions;
 using TenantCore.Domain.Common;
 using TenantCore.Domain.Entities;
@@ -142,7 +143,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.TimeZone).HasMaxLength(80);
             entity.Property(x => x.Theme).HasMaxLength(40);
             entity.Property(x => x.AllowedDomains).HasMaxLength(500);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            ConfigureConcurrencyToken(entity);
             entity.HasIndex(x => x.Slug).IsUnique();
         });
     }
@@ -157,7 +158,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.FullName).HasMaxLength(120);
             entity.Property(x => x.PasswordHash).HasMaxLength(500);
             entity.Property(x => x.Role).HasConversion<string>().HasMaxLength(20);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            ConfigureConcurrencyToken(entity);
             entity.HasIndex(x => new { x.TenantId, x.Email }).IsUnique();
             entity.HasIndex(x => new { x.TenantId, x.Role });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
@@ -192,7 +193,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.Code).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.Name).HasMaxLength(60);
             entity.Property(x => x.Description).HasMaxLength(240);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            ConfigureConcurrencyToken(entity);
             entity.HasIndex(x => x.Code).IsUnique();
         });
 
@@ -204,7 +205,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.QuotaState).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.WarningMessage).HasMaxLength(240);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            ConfigureConcurrencyToken(entity);
             entity.HasIndex(x => x.TenantId).IsUnique();
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
             entity.HasQueryFilter(x => CurrentTenantId != Guid.Empty && x.TenantId == CurrentTenantId);
@@ -231,7 +232,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.ContactName).HasMaxLength(120);
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.Notes).HasMaxLength(500);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            ConfigureConcurrencyToken(entity);
             entity.HasIndex(x => new { x.TenantId, x.Name });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
             entity.HasQueryFilter(x => CurrentTenantId != Guid.Empty && x.TenantId == CurrentTenantId);
@@ -245,7 +246,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.Code).HasMaxLength(20);
             entity.Property(x => x.Description).HasMaxLength(600);
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            ConfigureConcurrencyToken(entity);
             entity.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
             entity.HasIndex(x => new { x.TenantId, x.Status });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
@@ -262,7 +263,7 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.Description).HasMaxLength(600);
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(x => x.Priority).HasConversion<string>().HasMaxLength(20);
-            entity.Property(x => x.RowVersion).IsRowVersion();
+            ConfigureConcurrencyToken(entity);
             entity.HasIndex(x => new { x.TenantId, x.ProjectId, x.Status });
             entity.HasIndex(x => new { x.TenantId, x.AssigneeUserId });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
@@ -282,11 +283,32 @@ public sealed class TenantCoreDbContext(
             entity.Property(x => x.EntityType).HasMaxLength(80);
             entity.Property(x => x.EntityId).HasMaxLength(80);
             entity.Property(x => x.CorrelationId).HasMaxLength(120);
-            entity.Property(x => x.MetadataJson).HasColumnType("nvarchar(max)");
+            if (!Database.IsNpgsql())
+            {
+                entity.Property(x => x.MetadataJson).HasColumnType("nvarchar(max)");
+            }
             entity.HasIndex(x => new { x.TenantId, x.OccurredAtUtc });
             entity.HasIndex(x => new { x.TenantId, x.Action, x.EntityType });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
             entity.HasQueryFilter(x => CurrentTenantId != Guid.Empty && x.TenantId == CurrentTenantId);
         });
+    }
+
+    /// <summary>
+    /// SQL Server usa <c>rowversion</c> na propriedade <see cref="AuditableEntity.RowVersion"/>.
+    /// PostgreSQL não tem esse tipo: lá o token de concorrência otimista é a coluna de sistema
+    /// <c>xmin</c> (propriedade sombra, não vira coluna nas migrations) e <c>RowVersion</c> fica fora do modelo.
+    /// </summary>
+    private void ConfigureConcurrencyToken<TEntity>(EntityTypeBuilder<TEntity> entity)
+        where TEntity : AuditableEntity
+    {
+        if (Database.IsNpgsql())
+        {
+            entity.Ignore(x => x.RowVersion);
+            entity.Property<uint>("xmin").IsRowVersion();
+            return;
+        }
+
+        entity.Property(x => x.RowVersion).IsRowVersion();
     }
 }
