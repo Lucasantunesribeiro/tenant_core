@@ -122,23 +122,26 @@ export function TasksPage() {
           <input
             type="text"
             placeholder="Pesquisar tarefas..."
+            aria-label="Pesquisar tarefas..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <select
+          aria-label="Filtrar por status"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-primary"
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
         >
           <option value="">Todos os status</option>
           {taskStatusOptions.map((opt) => <option key={opt} value={opt}>{labelForTaskStatus(opt)}</option>)}
         </select>
         <select
+          aria-label="Filtrar por projeto"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-primary"
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
         >
           <option value="">Todos os projetos</option>
           {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -158,7 +161,7 @@ export function TasksPage() {
       {!tasksQuery.isLoading && !tasksQuery.isError && rows.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Tarefa</th>
@@ -204,7 +207,8 @@ export function TasksPage() {
                           ) : null}
                           <Button variant="ghost" onClick={() => openEdit(task)}>Editar</Button>
                           <Button variant="ghost" onClick={() => deleteMutation.mutate(task.id)} disabled={deleteMutation.isPending}>
-                            <Trash2 className="h-4 w-4 text-red-400" />
+                            <Trash2 className="h-4 w-4 text-red-600" aria-hidden="true" />
+                            <span className="sr-only">Excluir</span>
                           </Button>
                         </div>
                       </td>

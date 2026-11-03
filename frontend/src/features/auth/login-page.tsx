@@ -77,40 +77,40 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background-light p-4 font-display">
-      <div className="flex w-full max-w-[1100px] min-h-[700px] overflow-hidden rounded-2xl shadow-2xl shadow-primary/10 border border-slate-200 bg-white">
+      <div className="flex w-full max-w-[1100px] flex-col overflow-hidden rounded-2xl shadow-2xl shadow-primary/10 border border-slate-200 bg-white lg:min-h-[700px] lg:flex-row">
 
         {/* Left panel — brand */}
-        <div className="relative hidden lg:flex w-5/12 flex-col justify-between overflow-hidden bg-primary p-12">
+        <div className="relative order-2 flex w-full flex-col justify-between gap-8 overflow-hidden bg-primary p-6 sm:p-8 lg:order-1 lg:w-5/12 lg:p-12">
           <div className="absolute inset-0 pointer-events-none opacity-10 bg-[radial-gradient(circle_at_50%_50%,_#fff_0%,_transparent_70%)]" />
           <div className="absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
 
-          <div className="relative z-10 flex items-center gap-3 text-white">
-            <span className="material-symbols-outlined text-3xl">deployed_code</span>
+          <div className="relative z-10 hidden items-center gap-3 text-white lg:flex">
+            <span className="material-symbols-outlined text-3xl" aria-hidden="true">deployed_code</span>
             <h1 className="text-2xl font-black tracking-tight">TenantCore</h1>
           </div>
 
           <div className="relative z-10">
-            <h2 className="text-4xl font-black leading-tight text-white mb-5">
+            <h2 className="mb-5 hidden text-4xl font-black leading-tight text-white lg:block">
               Plataforma Multi-Tenant Elevada ao Próximo Nível
             </h2>
-            <p className="text-white/80 text-base leading-relaxed max-w-sm">
+            <p className="hidden max-w-sm text-base leading-relaxed text-white/90 lg:block">
               Gerencie múltiplos tenants, projetos, clientes e usuários com isolamento real, auditoria e controle de cotas.
             </p>
 
-            <div className="mt-10 flex gap-4">
+            <div className="mt-10 hidden gap-4 lg:flex">
               <div className="flex-1 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-md">
-                <span className="material-symbols-outlined text-white mb-2 block">shield_lock</span>
+                <span className="material-symbols-outlined text-white mb-2 block" aria-hidden="true">shield_lock</span>
                 <p className="text-sm font-bold text-white">Isolamento Tenant</p>
               </div>
               <div className="flex-1 rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-md">
-                <span className="material-symbols-outlined text-white mb-2 block">analytics</span>
-                <p className="text-sm font-bold text-white">Auditoria em Tempo Real</p>
+                <span className="material-symbols-outlined text-white mb-2 block" aria-hidden="true">analytics</span>
+                <p className="text-sm font-bold text-white">Trilha de Auditoria</p>
               </div>
             </div>
 
             {/* Demo accounts */}
-            <div className="mt-10">
-              <p className="text-xs font-bold uppercase tracking-widest text-white/60 mb-3">Contas de demonstração</p>
+            <div className="lg:mt-10">
+              <p className="text-xs font-bold uppercase tracking-widest text-white mb-3">Contas de demonstração</p>
               <div className="space-y-2">
                 {demoAccounts.map((account) => (
                   <button
@@ -120,26 +120,26 @@ export function LoginPage() {
                       setValues({ email: account.email, tenantId: account.tenantId, password: 'Passw0rd!' })
                       setErrors({})
                     }}
-                    className="w-full rounded-xl border border-white/20 bg-white/10 p-3 text-left transition hover:bg-white/20"
+                    className="w-full rounded-xl border border-white/30 bg-white/10 p-3 text-left transition hover:bg-white/20 focus-visible:outline-white"
                   >
                     <p className="text-sm font-bold text-white">{account.name}</p>
-                    <p className="text-xs text-white/70 mt-0.5">{account.email}</p>
+                    <p className="text-xs text-white/90 mt-0.5">{account.email}</p>
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 text-white/50 text-xs">
+          <div className="relative z-10 text-xs text-white/90">
             © 2026 TenantCore. Todos os direitos reservados.
           </div>
         </div>
 
         {/* Right panel — form */}
-        <div className="flex flex-1 flex-col justify-center p-8 md:p-14">
+        <div className="order-1 flex flex-1 flex-col justify-center p-6 sm:p-10 lg:order-2 lg:p-14">
           <div className="mb-8">
-            <h3 className="text-3xl font-black text-slate-900 mb-1">Bem-vindo de volta</h3>
-            <p className="text-slate-500 text-sm">Acesse sua conta com as credenciais abaixo.</p>
+            <h1 className="text-3xl font-black text-slate-900 mb-1">Bem-vindo de volta</h1>
+            <p className="text-slate-600 text-sm">Acesse sua conta com as credenciais abaixo.</p>
           </div>
 
           <form
@@ -162,7 +162,7 @@ export function LoginPage() {
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-              {errors.email ? <p className="text-xs text-red-500">{errors.email}</p> : null}
+              {errors.email ? <p className="text-xs text-red-700">{errors.email}</p> : null}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -180,14 +180,16 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  aria-pressed={showPassword}
+                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 hover:text-slate-700"
                 >
-                  <span className="material-symbols-outlined text-xl">
+                  <span className="material-symbols-outlined text-xl" aria-hidden="true">
                     {showPassword ? 'visibility_off' : 'visibility'}
                   </span>
                 </button>
               </div>
-              {errors.password ? <p className="text-xs text-red-500">{errors.password}</p> : null}
+              {errors.password ? <p className="text-xs text-red-700">{errors.password}</p> : null}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -203,11 +205,11 @@ export function LoginPage() {
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono"
                 />
               </div>
-              {errors.tenantId ? <p className="text-xs text-red-500">{errors.tenantId}</p> : null}
+              {errors.tenantId ? <p className="text-xs text-red-700">{errors.tenantId}</p> : null}
             </div>
 
             {loginMutation.isError ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {problemMessage(loginMutation.error)}
               </div>
             ) : null}
@@ -215,15 +217,15 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loginMutation.isPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-bold text-white shadow-lg shadow-primary/20 transition active:scale-[0.98] hover:bg-primary/90 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-sm font-bold text-white shadow-lg shadow-primary/20 transition active:scale-[0.98] hover:bg-primary-hover disabled:opacity-50"
             >
               <span>{loginMutation.isPending ? 'Entrando...' : 'Entrar no Dashboard'}</span>
               <span className="material-symbols-outlined text-[18px]" aria-hidden="true">login</span>
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-slate-500">
-            Use as contas de demonstração ao lado para acesso rápido.
+          <p className="mt-8 text-center text-sm text-slate-600">
+            Ou escolha uma das contas de demonstração para preencher o formulário.
           </p>
         </div>
       </div>

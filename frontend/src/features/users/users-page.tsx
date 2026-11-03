@@ -93,15 +93,17 @@ export function UsersPage() {
           <input
             type="text"
             placeholder="Pesquisar por nome ou e-mail..."
+            aria-label="Pesquisar por nome ou e-mail..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <select
+          aria-label="Filtrar por função"
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-primary"
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
         >
           <option value="">Todas as funções</option>
           {roleOptions.map((opt) => <option key={opt} value={opt}>{roleLabels[opt]}</option>)}
@@ -121,7 +123,7 @@ export function UsersPage() {
       {!usersQuery.isLoading && !usersQuery.isError && rows.length > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Usuário</th>

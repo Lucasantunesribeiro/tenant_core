@@ -6,7 +6,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#ec5b13',
+        // #c2410c: 5,2:1 contra branco (AA). O laranja anterior (#ec5b13) dava 3,4:1.
+        primary: { DEFAULT: '#c2410c', hover: '#9a3412' },
         'background-light': '#f8f6f6',
         'background-dark': '#221610',
       },

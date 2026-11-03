@@ -82,7 +82,7 @@ export function AuditPage() {
             <span className="text-xs font-medium text-slate-500">{auditQuery.data?.items.length} eventos</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50">
                   <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Ação</th>

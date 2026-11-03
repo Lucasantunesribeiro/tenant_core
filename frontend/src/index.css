@@ -29,3 +29,9 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   user-select: none;
 }
+
+/* Foco visível para navegação por teclado (links, botões e controles sem anel próprio). */
+:focus-visible {
+  outline: 2px solid #c2410c;
+  outline-offset: 2px;
+}

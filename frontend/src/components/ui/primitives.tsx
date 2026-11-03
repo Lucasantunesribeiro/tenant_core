@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { forwardRef } from 'react'
+import { forwardRef, useEffect, useId } from 'react'
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -43,10 +43,10 @@ export function Panel({ className, children }: PropsWithChildren<{ className?: s
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 const buttonVariants: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-white hover:bg-primary/90 shadow-sm shadow-primary/20',
+  primary: 'bg-primary text-white hover:bg-primary-hover shadow-sm shadow-primary/20',
   secondary: 'border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800',
   ghost: 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
-  danger: 'bg-red-500 text-white hover:bg-red-600',
+  danger: 'bg-red-600 text-white hover:bg-red-700',
 }
 
 export function Button({
@@ -57,7 +57,7 @@ export function Button({
   return (
     <button
       className={clsx(
-        'inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50',
+        'inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
         buttonVariants[variant],
         className,
       )}
@@ -95,10 +95,10 @@ export function Field({
     <label className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{label}</span>
-        {hint ? <span className="text-xs text-slate-400">{hint}</span> : null}
+        {hint ? <span className="text-xs text-slate-500">{hint}</span> : null}
       </div>
       {children}
-      {error ? <p className="text-xs text-red-500">{error}</p> : null}
+      {error ? <p className="text-xs text-red-700">{error}</p> : null}
     </label>
   )
 }
@@ -159,9 +159,18 @@ export function EmptyState({
   )
 }
 
+export function FullPageLoader({ label }: { label: string }) {
+  return (
+    <div role="status" className="flex min-h-screen items-center justify-center gap-3 bg-background-light">
+      <div className="h-3 w-3 animate-pulse rounded-full bg-primary" aria-hidden="true" />
+      <p className="text-sm text-slate-600">{label}</p>
+    </div>
+  )
+}
+
 export function LoadingState({ label = 'Carregando dados...' }: { label?: string }) {
   return (
-    <div className="flex min-h-40 items-center justify-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
+    <div role="status" className="flex min-h-40 items-center justify-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
       <div className="h-3 w-3 animate-pulse rounded-full bg-primary" />
       <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
     </div>
@@ -178,10 +187,10 @@ export function ErrorState({
   retry?: () => void
 }) {
   return (
-    <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-6">
+    <div role="alert" className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-6">
       <div className="space-y-2">
         <h3 className="text-base font-bold text-red-700 dark:text-red-400">{title}</h3>
-        <p className="text-sm text-red-600 dark:text-red-300">{detail}</p>
+        <p className="text-sm text-red-700 dark:text-red-300">{detail}</p>
         {retry ? (
           <div className="pt-2">
             <Button variant="danger" onClick={retry}>
@@ -198,7 +207,7 @@ export function AccessNotice({ title, detail }: { title: string; detail: string 
   return (
     <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-5">
       <h3 className="text-base font-bold text-amber-700 dark:text-amber-400">{title}</h3>
-      <p className="mt-1 text-sm text-amber-600 dark:text-amber-300">{detail}</p>
+      <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">{detail}</p>
     </div>
   )
 }
@@ -215,16 +224,36 @@ export function Modal({
   description?: string
   onClose: () => void
 }>) {
+  const titleId = useId()
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open, onClose])
+
   if (!open) {
     return null
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-2xl sm:p-6"
+      >
         <div className="mb-6 flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
+            <h2 id={titleId} className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
             {description ? <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
           </div>
           <Button variant="ghost" onClick={onClose}>
