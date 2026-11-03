@@ -206,11 +206,11 @@ export function ClientsPage() {
                           </Button>
                           <Button
                             variant="ghost"
+                            aria-label="Excluir"
                             onClick={() => deleteMutation.mutate(client.id)}
                             disabled={deleteMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4 text-red-600" aria-hidden="true" />
-                            <span className="sr-only">Excluir</span>
                           </Button>
                         </div>
                       </td>

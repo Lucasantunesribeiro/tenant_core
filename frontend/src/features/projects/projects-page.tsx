@@ -177,9 +177,8 @@ export function ProjectsPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button variant="ghost" onClick={() => openEdit(project)}>Editar</Button>
-                          <Button variant="ghost" onClick={() => deleteMutation.mutate(project.id)} disabled={deleteMutation.isPending}>
+                          <Button variant="ghost" aria-label="Excluir" onClick={() => deleteMutation.mutate(project.id)} disabled={deleteMutation.isPending}>
                             <Trash2 className="h-4 w-4 text-red-600" aria-hidden="true" />
-                            <span className="sr-only">Excluir</span>
                           </Button>
                         </div>
                       </td>
