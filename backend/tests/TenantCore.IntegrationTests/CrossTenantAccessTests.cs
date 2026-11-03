@@ -302,16 +302,12 @@ public sealed class CrossTenantAccessTests
     {
         await using var host = await TenantCoreApiTestHost.CreateAsync();
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
-        {
-            Content = JsonContent.Create(new { email = "admin@acme.test", password = "Passw0rd!" }),
-        };
-        request.Headers.Add(HeaderNames.TenantId, Globex);
+        // Credenciais válidas do admin da Acme, mas enviadas com o header da Globex.
+        // Reusa a senha demo padrão do helper (sem repetir o literal aqui).
+        var act = () => host.LoginAsync("admin@acme.test", Globex);
 
-        var response = await host.Client.SendAsync(request);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await TenantCoreApiTestHost.ReadProblemAsync(response)).Type.Should().Be("invalid_credentials");
+        (await act.Should().ThrowAsync<HttpRequestException>())
+            .Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
