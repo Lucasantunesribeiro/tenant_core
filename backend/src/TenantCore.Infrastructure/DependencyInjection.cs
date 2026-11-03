@@ -30,8 +30,7 @@ public static class DependencyInjection
 
         var databaseProvider = DatabaseProviderSettings.GetProvider(configuration);
         var databaseConnection = DatabaseProviderSettings.GetConnectionString(configuration, databaseProvider);
-        var redisConnection = configuration.GetConnectionString("Redis")
-            ?? throw new InvalidOperationException("Connection string 'Redis' is missing.");
+        var redisConnection = configuration.GetConnectionString("Redis");
 
         services.AddDbContext<TenantCoreDbContext>(options =>
             options.UseConfiguredDatabase(databaseProvider, databaseConnection, enableRetryOnFailure: true));
@@ -45,11 +44,21 @@ public static class DependencyInjection
         services.AddScoped<ICacheService, DistributedCacheService>();
         services.AddScoped<DemoDataSeeder>();
 
-        services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
-        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnection));
-        services.AddHealthChecks()
-            .AddDbContextCheck<TenantCoreDbContext>("database", tags: new[] { "ready" })
-            .AddCheck<RedisHealthCheck>("redis", tags: new[] { "ready" });
+        var healthChecks = services.AddHealthChecks()
+            .AddDbContextCheck<TenantCoreDbContext>("database", tags: new[] { "ready" });
+
+        if (string.IsNullOrWhiteSpace(redisConnection))
+        {
+            // Sem Redis (ex.: demo gratuita com uma única instância): cache distribuído em memória.
+            // Com mais de uma instância da API o cache deixa de ser compartilhado; use Redis nesse caso.
+            services.AddDistributedMemoryCache();
+        }
+        else
+        {
+            services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
+            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnection));
+            healthChecks.AddCheck<RedisHealthCheck>("redis", tags: new[] { "ready" });
+        }
 
         services.AddQuartz(q =>
         {
